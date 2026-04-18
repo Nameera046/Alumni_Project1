@@ -20,6 +20,7 @@ import RequesterFeedbackForm from './RequesterFeedbackForm';
 import AlumniFeedbackDisplay from './AlumniFeedbackDisplay';
 import AlumniJobRequestsDisplay from './AlumniJobRequestsDisplay';
 import { useNavigate } from 'react-router-dom';
+import { getScreenPath } from '../../utils/screenPaths';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -470,12 +471,13 @@ const PlacementDashboard = ({ onBackToHome }) => {
 
   // Navigation functions
   const handleWebinarClick = () => {
+    const webinarPath = getScreenPath('webinar-dashboard') || '/1';
     setShowDropdown(false);
     if (userEmail) {
       const encryptedEmail = encryptEmail(userEmail);
-      navigate(`/webinar-dashboard?email=${encodeURIComponent(encryptedEmail)}`);
+      navigate(`${webinarPath}?email=${encodeURIComponent(encryptedEmail)}`);
     } else {
-      navigate('/webinar-dashboard');
+      navigate(webinarPath);
     }
   };
 
@@ -483,9 +485,9 @@ const PlacementDashboard = ({ onBackToHome }) => {
     setShowDropdown(false);
     if (userEmail) {
       const encryptedEmail = encryptEmail(userEmail);
-      navigate(`/dashboard?email=${encodeURIComponent(encryptedEmail)}`);
+      navigate(`/14?email=${encodeURIComponent(encryptedEmail)}`);
     } else {
-      navigate('/dashboard');
+      navigate('/14');
     }
   };
 
@@ -558,11 +560,18 @@ const PlacementDashboard = ({ onBackToHome }) => {
   // Pure database-driven navigation
   const handleQuickAction = (action) => {
     console.log('Quick action clicked:', action);
-    
-    if (action.path) {
-      navigate(`${action.path}?email=${encodeURIComponent(userEmail)}`);
-    } else if (action.id) {
-      console.warn('No path in action, using ID:', action.id);
+
+    const targetPath = action?.id ? getScreenPath(action.id) : getScreenPath(action?.path);
+
+    if (targetPath) {
+      if (userEmail) {
+        const encryptedEmail = encryptEmail(userEmail);
+        navigate(`${targetPath}?email=${encodeURIComponent(encryptedEmail)}`);
+      } else {
+        navigate(targetPath);
+      }
+    } else {
+      console.warn('No valid path or screen ID found for action:', action);
     }
   };
 

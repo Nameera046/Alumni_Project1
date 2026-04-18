@@ -182,11 +182,13 @@ const InterviewResultsView = () => {
   };
 
   const cardStyle = {
-    background: 'white',
+    background: 'rgba(255, 255, 255, 0.9)',
     borderRadius: isMobile ? '12px' : '16px',
     padding: isMobile ? '1rem' : isTablet ? '1.25rem' : '1.5rem',
-    boxShadow: isMobile ? '0 4px 12px rgba(0,0,0,0.1)' : '0 20px 60px rgba(0,0,0,0.15)',
-    marginBottom: isMobile ? '1rem' : '1.5rem'
+    boxShadow: isMobile ? '0 4px 12px rgba(102,126,234,0.08)' : '0 20px 60px rgba(102,126,234,0.12)',
+    marginBottom: isMobile ? '1rem' : '1.5rem',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(139, 92, 246, 0.12)'
   };
 
   // LIST VIEW
@@ -267,7 +269,6 @@ const InterviewResultsView = () => {
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
-              alignItems: 'center', 
               marginBottom: isMobile ? '1rem' : '1.5rem', 
               paddingBottom: isMobile ? '0.75rem' : '1rem', 
               borderBottom: '2px solid #f3f4f6',
@@ -282,7 +283,6 @@ const InterviewResultsView = () => {
               }}>
                 Alumni List ({filteredAlumni.length})
               </h2>
-             
             </div>
 
             {loading ? (
@@ -368,9 +368,8 @@ const InterviewResultsView = () => {
                       border: '1px solid #e0e7ff',
                       alignItems: 'center',
                       transition: 'all 0.3s',
-                      cursor: 'pointer'
+                      cursor: 'default'
                     }}
-                    onClick={() => handleViewMore(alumni)}
                     onMouseEnter={(e) => {
                       if (!isMobile) {
                         e.currentTarget.style.transform = 'translateY(-2px)';

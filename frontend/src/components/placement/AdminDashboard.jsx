@@ -476,11 +476,11 @@ const response = await axios.get(`${API_BASE_URL}/api/job-requests`);
       <div style={{
         maxWidth: '1400px',
         margin: '0 auto',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        borderRadius: '20px',
-        border: '1px solid rgba(139, 92, 246, 0.15)',
-        boxShadow: '0 10px 30px rgba(139, 92, 246, 0.15)',
+        background: 'rgba(255, 255, 255, 0.88)',
+        backdropFilter: 'blur(24px)',
+        borderRadius: '24px',
+        border: '1px solid rgba(139, 92, 246, 0.12)',
+        boxShadow: '0 18px 44px rgba(102, 126, 234, 0.12)',
         overflow: 'hidden'
       }}>
         {jobRequests.length === 0 ? (
@@ -835,21 +835,25 @@ const response = await axios.get(`${API_BASE_URL}/api/job-requests`);
               <button
                 onClick={() => setSelectedRequest(null)}
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  minWidth: '40px',
+                  width: '36px',
+                  height: '36px',
+                  minWidth: '36px',
                   borderRadius: '50%',
                   background: 'rgba(139, 92, 246, 0.1)',
                   border: '1px solid rgba(139, 92, 246, 0.2)',
                   color: '#7c3aed',
-                  fontSize: '24px',
+                  fontSize: '18px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.3s ease',
-                  fontWeight: 'bold',
-                  lineHeight: '1'
+                  fontWeight: '700',
+                  lineHeight: '1',
+                  padding: 0,
+                  flexShrink: 0,
+                  alignSelf: 'flex-start',
+                  marginTop: '2px'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
@@ -1384,21 +1388,25 @@ const response = await axios.get(`${API_BASE_URL}/api/job-requests`);
               <button
                 onClick={() => setShowAssignModal(false)}
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  minWidth: '40px',
+                  width: '36px',
+                  height: '36px',
+                  minWidth: '36px',
                   borderRadius: '50%',
                   background: 'rgba(139, 92, 246, 0.1)',
                   border: '1px solid rgba(139, 92, 246, 0.2)',
                   color: '#7c3aed',
-                  fontSize: '24px',
+                  fontSize: '18px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.3s ease',
-                  fontWeight: 'bold',
-                  lineHeight: '1'
+                  fontWeight: '700',
+                  lineHeight: '1',
+                  padding: 0,
+                  flexShrink: 0,
+                  alignSelf: 'flex-start',
+                  marginTop: '2px'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';

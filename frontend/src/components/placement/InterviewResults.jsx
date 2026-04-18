@@ -260,6 +260,16 @@ const InterviewResults = () => {
       return;
     }
 
+    if (finalStatus === 'Closure' && !hasSelectedCompany && !allCompaniesRejected) {
+      setUpdateError('Closure can be marked only after the alumni is selected in at least one company or rejected in all companies');
+      return;
+    }
+
+    if (finalStatus === 'Not Doable' && (!allCompaniesNotApplied || hasSelectedCompany)) {
+      setUpdateError('Not Doable can be marked only when the alumni is not selected in any company and all company statuses are Not Applied');
+      return;
+    }
+
     try {
       setIsSavingFinalStatus(true);
       setUpdateError(null);
@@ -351,6 +361,18 @@ const InterviewResults = () => {
     }
   };
 
+  const hasSelectedCompany = companiesAssigned.some(
+    company => company.alumni_status === 'Selected'
+  );
+
+  const allCompaniesRejected = companiesAssigned.length > 0 && companiesAssigned.every(
+    company => company.alumni_status === 'Rejected'
+  );
+
+  const allCompaniesNotApplied = companiesAssigned.length > 0 && companiesAssigned.every(
+    company => company.alumni_status === 'Not Applied'
+  );
+
   const filteredAlumni = alumniList.filter(alumni => 
     alumni.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     alumni.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -365,11 +387,13 @@ const InterviewResults = () => {
   };
 
   const cardStyle = {
-    background: 'white',
+    background: 'rgba(255, 255, 255, 0.9)',
     borderRadius: isMobile ? '12px' : '16px',
     padding: isMobile ? '1rem' : '1.5rem',
-    boxShadow: isMobile ? '0 4px 12px rgba(0,0,0,0.1)' : '0 20px 60px rgba(0,0,0,0.15)',
-    marginBottom: isMobile ? '1rem' : '1.5rem'
+    boxShadow: isMobile ? '0 4px 12px rgba(102,126,234,0.08)' : '0 20px 60px rgba(102,126,234,0.12)',
+    marginBottom: isMobile ? '1rem' : '1.5rem',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(139, 92, 246, 0.12)'
   };
 
   // LIST VIEW
@@ -505,9 +529,8 @@ const InterviewResults = () => {
                       borderRadius: '8px',
                       border: '1px solid #e0e7ff',
                       transition: 'all 0.3s',
-                      cursor: 'pointer'
+                      cursor: 'default'
                     }}
-                    onClick={() => !isMobile && handleViewMore(alumni)}
                   >
                     {/* Name & Details - Mobile Stack */}
                     <div style={{ 
@@ -1100,7 +1123,9 @@ const InterviewResults = () => {
 
                         {/* Company Info */}
                         <div style={{ 
-                          marginRight: editingCompany || isMobile ? '0' : '120px',
+                          marginRight: editingCompany || isMobile
+                            ? '0'
+                            : (company.final_status || company.coordinator_remark ? '280px' : '120px'),
                           marginTop: isMobile ? '0' : '0'
                         }}>
                           <h4 style={{ 
@@ -1231,9 +1256,34 @@ const InterviewResults = () => {
                                     }}
                                   >
                                     <option value="">Select final status (optional)</option>
-                                    <option value="Closure">Closure</option>
-                                    <option value="Not Doable">Not Doable</option>
+                                    <option value="Closure" disabled={!hasSelectedCompany && !allCompaniesRejected}>
+                                      Closure
+                                    </option>
+                                    <option
+                                      value="Not Doable"
+                                      disabled={hasSelectedCompany || !allCompaniesNotApplied}
+                                    >
+                                      Not Doable
+                                    </option>
                                   </select>
+                                  {!hasSelectedCompany && !allCompaniesRejected && (
+                                    <div style={{
+                                      marginTop: '0.35rem',
+                                      fontSize: isMobile ? '0.68rem' : '0.75rem',
+                                      color: '#dc2626'
+                                    }}>
+                                      Closure is available only after the alumni is selected in at least one company or rejected in all companies.
+                                    </div>
+                                  )}
+                                  {(hasSelectedCompany || !allCompaniesNotApplied) && (
+                                    <div style={{
+                                      marginTop: '0.35rem',
+                                      fontSize: isMobile ? '0.68rem' : '0.75rem',
+                                      color: '#dc2626'
+                                    }}>
+                                      Not Doable is available only when no company is selected and all company statuses are Not Applied.
+                                    </div>
+                                  )}
                                 </div>
 
                                 <div>
@@ -1339,7 +1389,11 @@ const InterviewResults = () => {
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                                 flexDirection: isMobile ? 'column' : 'row',
-                                gap: isMobile ? '0.5rem' : '0'
+                                gap: isMobile ? '0.5rem' : '1rem',
+                                flexWrap: 'wrap',
+                                marginRight: isMobile
+                                  ? '0'
+                                  : (company.final_status || company.coordinator_remark ? '280px' : '0')
                               }}>
                                 <button
                                   onClick={() => handleEditFinalStatus(company)}

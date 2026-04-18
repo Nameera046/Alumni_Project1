@@ -65,110 +65,121 @@ const fetchCompanies = async () => {
   // Inline CSS
   const styles = {
     container: {
-      padding: '20px',
-      maxWidth: '1200px',
-      margin: '0 auto'
+      maxWidth: '1400px',
+      margin: '0 auto',
+      padding: '22px 20px 30px'
     },
     header: {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: '30px',
-      flexWrap: 'wrap'
+      flexWrap: 'wrap',
+      gap: '16px'
     },
     title: {
       fontSize: '28px',
-      fontWeight: '600',
-      color: '#2c3e50',
-      margin: 0
+      fontWeight: '700',
+      color: '#1f2937',
+      margin: 0,
+      letterSpacing: '-0.4px'
     },
     filters: {
       display: 'flex',
-      gap: '10px'
+      gap: '12px',
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end'
     },
     filterButton: {
-      padding: '8px 16px',
-      borderRadius: '20px',
-      border: 'none',
+      padding: '10px 18px',
+      borderRadius: '999px',
+      border: '1px solid rgba(139, 92, 246, 0.14)',
       cursor: 'pointer',
-      fontWeight: '500',
-      transition: 'all 0.3s'
+      fontWeight: '600',
+      fontSize: '14px',
+      transition: 'all 0.3s ease',
+      boxShadow: '0 6px 18px rgba(102, 126, 234, 0.08)'
     },
     tableContainer: {
       overflowX: 'auto',
-      borderRadius: '10px',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+      borderRadius: '24px',
+      boxShadow: '0 18px 40px rgba(102, 126, 234, 0.12)',
+      background: 'rgba(255, 255, 255, 0.9)',
+      border: '1px solid rgba(139, 92, 246, 0.12)',
+      backdropFilter: 'blur(20px)'
     },
     table: {
       width: '100%',
       borderCollapse: 'collapse',
-      backgroundColor: 'white'
+      backgroundColor: 'rgba(255, 255, 255, 0.92)'
     },
     th: {
-      backgroundColor: '#f8f9fa',
-      padding: '16px',
+      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+      padding: '18px 20px',
       textAlign: 'left',
       fontWeight: '600',
-      color: '#2c3e50',
-      borderBottom: '2px solid #e9ecef',
+      color: '#ffffff',
+      borderBottom: 'none',
       position: 'sticky',
       top: 0
     },
     td: {
-      padding: '16px',
-      borderBottom: '1px solid #e9ecef',
+      padding: '20px',
+      borderBottom: '1px solid rgba(139, 92, 246, 0.1)',
       verticalAlign: 'top'
     },
     tr: {
-      transition: 'background-color 0.2s'
+      transition: 'background-color 0.2s ease'
     },
     companyName: {
-      fontWeight: '500',
-      color: '#3498db',
+      fontWeight: '700',
+      color: '#7c3aed',
       cursor: 'pointer'
     },
     alumniBadge: {
-      backgroundColor: '#27ae60',
-      color: 'white',
-      padding: '4px 8px',
-      borderRadius: '12px',
+      background: 'rgba(16, 185, 129, 0.14)',
+      color: '#059669',
+      padding: '7px 12px',
+      borderRadius: '999px',
       fontSize: '12px',
-      fontWeight: '500'
+      fontWeight: '700'
     },
     nonAlumniBadge: {
-      backgroundColor: '#7f8c8d',
-      color: 'white',
-      padding: '4px 8px',
-      borderRadius: '12px',
+      background: 'rgba(139, 92, 246, 0.12)',
+      color: '#7c3aed',
+      padding: '7px 12px',
+      borderRadius: '999px',
       fontSize: '12px',
-      fontWeight: '500'
+      fontWeight: '700'
     },
     skills: {
-      color: '#666',
+      color: '#4b5563',
       fontSize: '14px',
-      maxWidth: '250px'
+      maxWidth: '250px',
+      lineHeight: '1.5'
     },
     location: {
-      color: '#666',
+      color: '#4b5563',
       fontSize: '14px'
     },
     deadline: {
-      color: '#e74c3c',
-      fontWeight: '500'
+      color: '#ef4444',
+      fontWeight: '700'
     },
     ctc: {
-      color: '#27ae60',
-      fontWeight: '600'
+      color: '#10b981',
+      fontWeight: '700'
     },
     viewButton: {
-      backgroundColor: '#3498db',
+      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
       color: 'white',
       border: 'none',
-      padding: '8px 16px',
-      borderRadius: '4px',
+      padding: '10px 18px',
+      borderRadius: '12px',
       cursor: 'pointer',
-      fontWeight: '500',
-      transition: 'background-color 0.3s'
+      fontWeight: '700',
+      transition: 'all 0.3s ease',
+      boxShadow: '0 8px 20px rgba(139, 92, 246, 0.22)'
     },
     modalOverlay: {
       position: 'fixed',
@@ -183,13 +194,16 @@ const fetchCompanies = async () => {
       zIndex: 1000
     },
     modalContent: {
-      backgroundColor: 'white',
+      background: 'rgba(255, 255, 255, 0.96)',
       padding: '30px',
-      borderRadius: '10px',
+      borderRadius: '20px',
       maxWidth: '600px',
       width: '90%',
       maxHeight: '80vh',
-      overflowY: 'auto'
+      overflowY: 'auto',
+      border: '1px solid rgba(139, 92, 246, 0.12)',
+      boxShadow: '0 20px 50px rgba(102, 126, 234, 0.18)',
+      backdropFilter: 'blur(20px)'
     },
     modalHeader: {
       display: 'flex',
@@ -199,8 +213,8 @@ const fetchCompanies = async () => {
     },
     modalTitle: {
       fontSize: '24px',
-      fontWeight: '600',
-      color: '#2c3e50',
+      fontWeight: '700',
+      color: '#1f2937',
       margin: 0
     },
     closeButton: {
@@ -215,7 +229,7 @@ const fetchCompanies = async () => {
     },
     modalLabel: {
       fontWeight: '600',
-      color: '#2c3e50',
+      color: '#6d28d9',
       marginBottom: '5px'
     },
     modalValue: {
@@ -230,15 +244,18 @@ const fetchCompanies = async () => {
     loading: {
       textAlign: 'center',
       padding: '40px',
-      color: '#7f8c8d'
+      color: '#6b7280'
     },
     error: {
       textAlign: 'center',
       padding: '20px',
       color: '#e74c3c',
-      backgroundColor: '#fadbd8',
-      borderRadius: '5px',
-      margin: '20px 0'
+      background: 'rgba(254, 226, 226, 0.92)',
+      borderRadius: '14px',
+      margin: '20px 0',
+      border: '1px solid rgba(248, 113, 113, 0.22)',
+      boxShadow: '0 8px 24px rgba(102, 126, 234, 0.08)',
+      backdropFilter: 'blur(16px)'
     },
     link: {
       color: '#3498db',
@@ -246,18 +263,20 @@ const fetchCompanies = async () => {
     },
     linkButton: {
       display: 'inline-block',
-      backgroundColor: '#2ecc71',
+      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
       color: 'white',
-      padding: '8px 16px',
-      borderRadius: '4px',
+      padding: '10px 16px',
+      borderRadius: '12px',
       textDecoration: 'none',
-      fontWeight: '500',
-      marginTop: '10px'
+      fontWeight: '700',
+      marginTop: '10px',
+      boxShadow: '0 8px 20px rgba(139, 92, 246, 0.18)'
     }
   };
 
   return (
-    <div style={styles.container}>
+    <div style={{ minHeight: '100vh', padding: '16px' }}>
+      <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>📊 Recruiting Companies</h1>
         
@@ -265,8 +284,10 @@ const fetchCompanies = async () => {
           <button 
             style={{ 
               ...styles.filterButton, 
-              backgroundColor: filter === 'all' ? '#3498db' : '#ecf0f1',
-              color: filter === 'all' ? 'white' : '#2c3e50'
+              background: filter === 'all'
+                ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+                : 'rgba(255, 255, 255, 0.82)',
+              color: filter === 'all' ? 'white' : '#475569'
             }}
             onClick={() => setFilter('all')}
           >
@@ -275,8 +296,10 @@ const fetchCompanies = async () => {
           <button 
             style={{ 
               ...styles.filterButton, 
-              backgroundColor: filter === 'alumni' ? '#27ae60' : '#ecf0f1',
-              color: filter === 'alumni' ? 'white' : '#2c3e50'
+              background: filter === 'alumni'
+                ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+                : 'rgba(255, 255, 255, 0.82)',
+              color: filter === 'alumni' ? 'white' : '#475569'
             }}
             onClick={() => setFilter('alumni')}
           >
@@ -285,8 +308,10 @@ const fetchCompanies = async () => {
           <button 
             style={{ 
               ...styles.filterButton, 
-              backgroundColor: filter === 'non-alumni' ? '#e74c3c' : '#ecf0f1',
-              color: filter === 'non-alumni' ? 'white' : '#2c3e50'
+              background: filter === 'non-alumni'
+                ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+                : 'rgba(255, 255, 255, 0.82)',
+              color: filter === 'non-alumni' ? 'white' : '#475569'
             }}
             onClick={() => setFilter('non-alumni')}
           >
@@ -454,6 +479,7 @@ const fetchCompanies = async () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

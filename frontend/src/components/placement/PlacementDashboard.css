@@ -806,6 +806,15 @@
 
 .component-wrapper {
   padding: 1rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.16) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(139, 92, 246, 0.12);
+  box-shadow: 0 20px 50px rgba(102, 126, 234, 0.08);
+  position: relative;
+  overflow: hidden;
 }
 
 /* Responsive Design */

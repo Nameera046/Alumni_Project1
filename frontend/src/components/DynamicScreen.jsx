@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { getScreenComponent, getScreenIdByName } from '../utils/screenMap';
+import { getScreenComponent, getScreenIdByName, getScreenPath, PLACEMENT_SCREEN_IDS } from '../utils/screenMap';
+import PlacementBackButton from './placement/PlacementBackButton';
 
 const DynamicScreen = () => {
   const { screenId } = useParams();
@@ -22,6 +23,17 @@ const DynamicScreen = () => {
   }
   
   const ScreenComponent = numericScreenId ? getScreenComponent(numericScreenId) : null;
+  const isPlacementScreen = numericScreenId && Object.values(PLACEMENT_SCREEN_IDS).includes(numericScreenId);
+  const showPlacementBackButton = isPlacementScreen && numericScreenId !== PLACEMENT_SCREEN_IDS.DASHBOARD;
+
+  const handleBackToPlacementDashboard = () => {
+    const dashboardPath = getScreenPath('placement-dashboard') || '/24';
+    if (emailParam) {
+      navigate(`${dashboardPath}?email=${encodeURIComponent(emailParam)}`);
+      return;
+    }
+    navigate(dashboardPath);
+  };
   
   if (ScreenComponent) {
     // Render the screen component with props
@@ -31,7 +43,16 @@ const DynamicScreen = () => {
       originalPath: screenId, // Pass original for potential use
       // Add more common props as needed
     };
-    return React.createElement(ScreenComponent, props);
+    return (
+      <>
+        {showPlacementBackButton && (
+          <PlacementBackButton
+            onClick={handleBackToPlacementDashboard}
+          />
+        )}
+        {React.createElement(ScreenComponent, props)}
+      </>
+    );
   }
 
   // Fallback for unauthorized/invalid screen

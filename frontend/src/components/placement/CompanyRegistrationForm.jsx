@@ -499,6 +499,16 @@ const CompanyRegistrationForm = () => {
     setLoading(true);
     setMessage({ text: '', type: '' });
 
+    const ctcValue = Number(formData.ctcOffered);
+    if (!Number.isFinite(ctcValue) || ctcValue < 0) {
+      setMessage({
+        text: 'CTC Offered must be a valid non-negative number!',
+        type: 'error'
+      });
+      setLoading(false);
+      return;
+    }
+
     // Validate deadline before submission
     if (!validateDeadline(formData.deadline)) {
       setMessage({ 
@@ -530,6 +540,8 @@ const CompanyRegistrationForm = () => {
       Object.keys(formData).forEach(key => {
         if (key === 'requiredSkills') {
           formDataToSend.append(key, skillsetString);
+        } else if (key === 'ctcOffered') {
+          formDataToSend.append(key, String(ctcValue));
         } else {
           formDataToSend.append(key, formData[key]);
         }
@@ -756,11 +768,13 @@ const CompanyRegistrationForm = () => {
                 CTC Offered <span style={styles.asterisk}>*</span>
               </label>
               <input
-                type="text"
+                type="number"
                 name="ctcOffered"
                 value={formData.ctcOffered}
                 onChange={handleChange}
-                placeholder="e.g., 8 LPA"
+                placeholder="8"
+                min="0"
+                step="0.01"
                 required
                 style={styles.input}
                 disabled={loading}

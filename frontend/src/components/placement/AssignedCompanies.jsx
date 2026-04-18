@@ -209,7 +209,19 @@ const AssignedCompanies = ({ userEmail }) => {
   };
 
   return (
-    <div style={{ minHeight: '100vh',  padding: '30px 20px' }}>
+    <div style={{ minHeight: '100vh', padding: '16px' }}>
+      <div style={{
+        maxWidth: '1440px',
+        margin: '0 auto',
+        minHeight: 'calc(100vh - 32px)',
+        padding: '30px 20px',
+        borderRadius: '28px',
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.16) 100%)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 20px 60px rgba(102, 126, 234, 0.12)',
+        overflow: 'hidden'
+      }}>
       {/* Header */}
       <div style={{
         maxWidth: '1200px',
@@ -256,10 +268,11 @@ const AssignedCompanies = ({ userEmail }) => {
             maxWidth: '500px',
             margin: '0 auto 30px',
             padding: '20px',
-            background: 'white',
+            background: 'rgba(255, 255, 255, 0.9)',
             borderRadius: '15px',
-            boxShadow: '0 5px 20px rgba(139, 92, 246, 0.1)',
-            border: '1px solid rgba(139, 92, 246, 0.1)'
+            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.12)',
+            border: '1px solid rgba(139, 92, 246, 0.12)',
+            backdropFilter: 'blur(20px)'
           }}>
             <div style={{
               fontSize: '13px',
@@ -333,12 +346,13 @@ const AssignedCompanies = ({ userEmail }) => {
           <div style={{
             textAlign: 'center',
             padding: '50px 30px',
-            background: 'white',
+            background: 'rgba(255, 255, 255, 0.9)',
             borderRadius: '15px',
             maxWidth: '600px',
             margin: '0 auto',
-            boxShadow: '0 5px 20px rgba(139, 92, 246, 0.1)',
-            border: '2px dashed #e5e7eb'
+            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.12)',
+            border: '2px dashed rgba(139, 92, 246, 0.18)',
+            backdropFilter: 'blur(20px)'
           }}>
             <div style={{ fontSize: '60px', marginBottom: '20px', opacity: 0.7 }}>📭</div>
             <h3 style={{ color: '#4b5563', marginBottom: '10px', fontSize: '18px' }}>
@@ -364,11 +378,12 @@ const AssignedCompanies = ({ userEmail }) => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              background: 'white',
+              background: 'rgba(255, 255, 255, 0.88)',
               padding: '10px 20px',
               borderRadius: '50px',
-              boxShadow: '0 2px 10px rgba(139, 92, 246, 0.1)',
-              border: '1px solid rgba(139, 92, 246, 0.1)'
+              boxShadow: '0 6px 18px rgba(102, 126, 234, 0.1)',
+              border: '1px solid rgba(139, 92, 246, 0.12)',
+              backdropFilter: 'blur(18px)'
             }}>
               <span style={{ color: '#8b5cf6' }}>📊</span>
               Showing {companies.length} assigned compan{companies.length === 1 ? 'y' : 'ies'}
@@ -387,15 +402,16 @@ const AssignedCompanies = ({ userEmail }) => {
               <div
                 key={company.mapping_id}
                 style={{
-                  background: 'white',
+                  background: 'rgba(255, 255, 255, 0.9)',
                   borderRadius: '20px',
-                  border: '1px solid rgba(139, 92, 246, 0.15)',
-                  boxShadow: '0 10px 30px rgba(139, 92, 246, 0.1)',
+                  border: '1px solid rgba(139, 92, 246, 0.12)',
+                  boxShadow: '0 12px 32px rgba(102, 126, 234, 0.12)',
                   overflow: 'visible',
                   transition: 'all 0.3s ease',
                   width: '340px',
                   flex: '0 0 340px',
-                  position: 'relative'
+                  position: 'relative',
+                  backdropFilter: 'blur(20px)'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-8px)';
@@ -604,7 +620,9 @@ const AssignedCompanies = ({ userEmail }) => {
                           border: '1px solid rgba(139, 92, 246, 0.2)',
                           borderRadius: '12px',
                           boxShadow: '0 10px 30px rgba(139, 92, 246, 0.2)',
-                          overflow: 'hidden',
+                          overflowX: 'hidden',
+                          overflowY: 'auto',
+                          maxHeight: '220px',
                           zIndex: 1000,
                           animation: 'fadeIn 0.2s ease'
                         }}>
@@ -744,6 +762,7 @@ const AssignedCompanies = ({ userEmail }) => {
           font-family: inherit;
         }
       `}</style>
+      </div>
     </div>
   );
 };

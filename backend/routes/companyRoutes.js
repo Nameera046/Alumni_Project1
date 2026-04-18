@@ -51,6 +51,14 @@ const registerCompany = async (req, res) => {
       posterBase64 = req.file.buffer.toString('base64');
     }
 
+    const parsedCtcOffered = Number(ctcOffered);
+    if (!Number.isFinite(parsedCtcOffered) || parsedCtcOffered < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'CTC Offered must be a valid non-negative number'
+      });
+    }
+
     // Get last company_id
     const lastCompany = await Company.findOne().sort({ company_id: -1 });
     const newCompanyId = lastCompany ? lastCompany.company_id + 1 : 1;
@@ -63,7 +71,7 @@ const registerCompany = async (req, res) => {
       role: jobRole,
       description: jobDescription,
       skills_required: requiredSkills,
-      ctc_offered: ctcOffered,
+      ctc_offered: String(parsedCtcOffered),
       location: location,
       link: applicationLink,
       deadline: new Date(deadline),

@@ -507,6 +507,63 @@ router.patch('/:mappingId', async (req, res) => {
       });
     }
 
+    const needsFinalStatusValidation = final_status === 'Closure' || final_status === 'Not Doable';
+    let currentMapping = null;
+
+    if (needsFinalStatusValidation) {
+      currentMapping = await CompanyMapping.findOne({ mapping_id: mappingId });
+
+      if (!currentMapping) {
+        return res.status(404).json({
+          success: false,
+          message: 'Mapping not found'
+        });
+      }
+    }
+
+    if (final_status === 'Closure') {
+      const hasSelectedCompany = await CompanyMapping.exists({
+        alumni_user_id: currentMapping.alumni_user_id,
+        alumni_status: 'Selected'
+      });
+
+      const hasRejectedCompany = await CompanyMapping.exists({
+        alumni_user_id: currentMapping.alumni_user_id,
+        alumni_status: 'Rejected'
+      });
+
+      const hasAnyNonRejectedCompany = await CompanyMapping.exists({
+        alumni_user_id: currentMapping.alumni_user_id,
+        alumni_status: { $ne: 'Rejected' }
+      });
+
+      if (!hasSelectedCompany && !(hasRejectedCompany && !hasAnyNonRejectedCompany)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Closure can be marked only after the alumni is selected in at least one company or rejected in all companies'
+        });
+      }
+    }
+
+    if (final_status === 'Not Doable') {
+      const hasSelectedCompany = await CompanyMapping.exists({
+        alumni_user_id: currentMapping.alumni_user_id,
+        alumni_status: 'Selected'
+      });
+
+      const hasAnyNonNotAppliedCompany = await CompanyMapping.exists({
+        alumni_user_id: currentMapping.alumni_user_id,
+        alumni_status: { $ne: 'Not Applied' }
+      });
+
+      if (hasSelectedCompany || hasAnyNonNotAppliedCompany) {
+        return res.status(400).json({
+          success: false,
+          message: 'Not Doable can be marked only when the alumni is not selected in any company and all company statuses are Not Applied'
+        });
+      }
+    }
+
     const updateData = { last_updated_on: new Date() };
     if (alumni_status !== undefined) updateData.alumni_status = alumni_status;
     if (remarks !== undefined) updateData.remarks = remarks;

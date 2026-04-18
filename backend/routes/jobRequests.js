@@ -228,6 +228,26 @@ router.post('/', upload.single('attachment'), async (req, res) => {
       });
     }
 
+    const parsedExperience = Number(experience);
+    if (!Number.isFinite(parsedExperience) || parsedExperience < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Years of Experience must be a valid non-negative number'
+      });
+    }
+
+    let parsedCtc = null;
+    if (ctc !== undefined && ctc !== null && String(ctc).trim() !== '') {
+      parsedCtc = Number(ctc);
+
+      if (!Number.isFinite(parsedCtc) || parsedCtc < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current CTC must be a valid non-negative number'
+        });
+      }
+    }
+
     // Get next auto-increment request_id
     const nextRequestId = await getNextRequestId();
     
@@ -237,8 +257,8 @@ router.post('/', upload.single('attachment'), async (req, res) => {
       location: location,
       skillset: skillset,
       company: company,
-      experience: experience || null,
-      ctc_current: ctc || null,
+      experience: parsedExperience,
+      ctc_current: parsedCtc,
       message: message || null,
       attachment: req.file ? req.file.filename : null,
       requested_on: new Date(),

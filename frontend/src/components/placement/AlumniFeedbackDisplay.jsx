@@ -289,7 +289,6 @@ const AlumniFeedbackDisplay = () => {
         /* Base Styles */
         .alumni-container {
           min-height: 100vh;
-         
           padding: 1rem;
         }
 
@@ -300,8 +299,16 @@ const AlumniFeedbackDisplay = () => {
         }
 
         .alumni-wrapper {
-          max-width: 80rem;
+          max-width: 90rem;
           margin: 0 auto;
+          min-height: calc(100vh - 2rem);
+          padding: 1.75rem;
+          border-radius: 1.75rem;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.16) 100%);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 20px 60px rgba(102, 126, 234, 0.12);
+          overflow: hidden;
         }
 
         /* Header Styles */
@@ -332,9 +339,11 @@ const AlumniFeedbackDisplay = () => {
 
         /* Search Bar Styles */
         .alumni-search-container {
-          background-color: white;
-          border-radius: 0.75rem;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 1rem;
+          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.12);
+          border: 1px solid rgba(139, 92, 246, 0.12);
+          backdrop-filter: blur(20px);
           padding: 1.5rem;
           margin-bottom: 2rem;
         }
@@ -373,9 +382,11 @@ const AlumniFeedbackDisplay = () => {
 
         /* Table Styles */
         .alumni-table-container {
-          background-color: white;
-          border-radius: 0.75rem;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 1rem;
+          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.12);
+          border: 1px solid rgba(139, 92, 246, 0.12);
+          backdrop-filter: blur(20px);
           overflow: hidden;
         }
 
@@ -564,11 +575,25 @@ const AlumniFeedbackDisplay = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          height: 16rem;
+          min-height: 100vh;
+          padding: 1rem;
         }
 
         .loading-content {
           text-align: center;
+          width: 100%;
+          max-width: 90rem;
+          min-height: calc(100vh - 2rem);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 1.75rem;
+          border-radius: 1.75rem;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.16) 100%);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 20px 60px rgba(102, 126, 234, 0.12);
         }
 
         .spinner {
@@ -598,11 +623,20 @@ const AlumniFeedbackDisplay = () => {
 
         /* Error Full Page Styles */
         .error-full-container {
-          background-color: #fef2f2;
-          border: 1px solid #fecaca;
-          border-radius: 0.5rem;
+          max-width: 90rem;
+          min-height: calc(100vh - 2rem);
+          margin: 1rem auto;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.16) 100%);
+          border: 1px solid rgba(248, 113, 113, 0.22);
+          border-radius: 1.75rem;
+          backdrop-filter: blur(12px);
+          box-shadow: 0 20px 60px rgba(102, 126, 234, 0.12);
           padding: 1.5rem;
           text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
         }
 
         .error-full-title {

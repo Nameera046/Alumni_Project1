@@ -9,36 +9,6 @@ const styles = {
     minHeight: '100vh',
     padding: '20px 15px',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  backgroundOrb: {
-    position: 'fixed',
-    borderRadius: '50%',
-    filter: 'blur(60px)',
-    opacity: 0.6,
-    zIndex: 0,
-  },
-  orb1: {
-    width: '300px',
-    height: '300px',
-    background: 'linear-gradient(135deg, #c4b5fd 0%, #a5b4fc 100%)',
-    top: '10%',
-    left: '10%',
-  },
-  orb2: {
-    width: '400px',
-    height: '400px',
-    background: 'linear-gradient(135deg, #a5b4fc 0%, #93c5fd 100%)',
-    bottom: '10%',
-    right: '10%',
-  },
-  orb3: {
-    width: '250px',
-    height: '250px',
-    background: 'linear-gradient(135deg, #93c5fd 0%, #c4b5fd 100%)',
-    top: '50%',
-    left: '80%',
   },
   wrapper: {
     maxWidth: '1000px',
@@ -488,17 +458,18 @@ const handleInputBlur = (e) => {
 
 
   export default function AlumniJobRequestForm({ userEmail, onSubmitSuccess }) {
+  const lockedEmail = userEmail || localStorage.getItem('userEmail') || '';
+
   // Initialize formData with the email from props OR localStorage
   const [formData, setFormData] = useState({
-    email: userEmail || localStorage.getItem('userEmail') || '', // 👈 ADD localStorage fallback
+    email: lockedEmail,
     location: '',
     skillset: [],
     company: '',
     experience: '',
     ctc: '',
     message: '',
-    attachment: null,
-    isRobot: false
+    attachment: null
   });
 
   const [skillInput, setSkillInput] = useState('');
@@ -522,26 +493,27 @@ const handleInputBlur = (e) => {
 
   // Use refs for better DOM access
   const submitButtonRef = useRef(null);
-  const checkboxLabelRef = useRef(null);
   const skillTagRemoveRefs = useRef([]);
   const skillAddButtonRef = useRef(null);
   const toasterCloseRef = useRef(null);
 
   // Auto-fill user data when component mounts or email changes
   useEffect(() => {
-    const emailToUse = userEmail || localStorage.getItem('userEmail'); // 👈 Use either
-    console.log('📧 AlumniJobRequestForm - Email being used:', emailToUse);
+    console.log('📧 AlumniJobRequestForm - Email being used:', lockedEmail);
     
-    if (emailToUse) {
+    if (lockedEmail) {
       setFormData(prev => ({
         ...prev,
-        email: emailToUse
+        email: lockedEmail
       }));
       
       // Automatically fetch user details
-      autoFillUserDetails(emailToUse);
+      autoFillUserDetails(lockedEmail);
+    } else {
+      setUserId(null);
+      setDisplayData({ name: '', contact: '', batch: '' });
     }
-  }, [userEmail]); // 👈 Still depends on prop
+  }, [lockedEmail]);
 
   const autoFillUserDetails = async (email) => {
     if (!email) return;
@@ -586,6 +558,10 @@ const handleInputBlur = (e) => {
   
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
+    if (name === 'email' && lockedEmail) {
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : type === 'file' ? files[0] : value
@@ -628,27 +604,21 @@ const handleInputBlur = (e) => {
     }, 3000);
   };
 
-  // Remove handleEmailBlur since we auto-fill on mount
-  // Keep only manual refresh if needed
-  const handleManualEmailCheck = async () => {
-    await autoFillUserDetails(formData.email);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.isRobot) {
-      showToaster('error', 'Please verify that you are not a robot!');
+
+    if (!lockedEmail) {
+      showToaster('error', 'Please log in with your own account to continue.');
       return;
     }
-
+    
     if (!userId) {
-      showToaster('error', 'Please use a registered email address!');
+      showToaster('error', 'Could not verify your logged-in account details.');
       return;
     }
 
     // Validate required fields
-    const requiredFields = ['email', 'location', 'company', 'experience', 'message'];
+    const requiredFields = ['location', 'company', 'experience', 'message'];
     const missingFields = requiredFields.filter(field => !formData[field] || formData[field].trim() === '');
     
     if (missingFields.length > 0) {
@@ -662,6 +632,20 @@ const handleInputBlur = (e) => {
       return;
     }
 
+    const experienceValue = Number(formData.experience);
+    if (!Number.isFinite(experienceValue) || experienceValue < 0) {
+      showToaster('error', 'Years of Experience must be a valid non-negative number.');
+      return;
+    }
+
+    if (formData.ctc && formData.ctc.trim() !== '') {
+      const ctcValue = Number(formData.ctc);
+      if (!Number.isFinite(ctcValue) || ctcValue < 0) {
+        showToaster('error', 'Current CTC must be a valid non-negative number.');
+        return;
+      }
+    }
+
     if (!formData.attachment) {
       showToaster('error', 'Please upload your resume!');
       return;
@@ -673,14 +657,14 @@ const handleInputBlur = (e) => {
       const formDataToSend = new FormData();
       
       formDataToSend.append('userId', userId);
-      formDataToSend.append('email', formData.email);
+      formDataToSend.append('email', lockedEmail);
       formDataToSend.append('location', formData.location);
       formDataToSend.append('skillset', JSON.stringify(formData.skillset));
       formDataToSend.append('company', formData.company);
-      formDataToSend.append('experience', formData.experience);
+      formDataToSend.append('experience', String(experienceValue));
       
       if (formData.ctc && formData.ctc.trim() !== '') {
-        formDataToSend.append('ctc', formData.ctc);
+        formDataToSend.append('ctc', String(Number(formData.ctc)));
       }
       
       formDataToSend.append('message', formData.message);
@@ -711,15 +695,14 @@ const handleInputBlur = (e) => {
         
         setTimeout(() => {
           setFormData({
-            email: userEmail || '', // Keep the email from props
+            email: lockedEmail,
             location: '',
             skillset: [],
             company: '',
             experience: '',
             ctc: '',
             message: '',
-            attachment: null,
-            isRobot: false
+            attachment: null
           });
           setSkillInput('');
           setDisplayData({ name: '', contact: '', batch: '' });
@@ -749,23 +732,6 @@ const handleInputBlur = (e) => {
 
   return (
     <div style={styles.container}>
-      {/* Animated Background Orbs */}
-      <div style={{
-        ...styles.backgroundOrb,
-        ...styles.orb1,
-        animation: 'float 20s ease-in-out infinite'
-      }} />
-      <div style={{
-        ...styles.backgroundOrb,
-        ...styles.orb2,
-        animation: 'float 25s ease-in-out infinite reverse'
-      }} />
-      <div style={{
-        ...styles.backgroundOrb,
-        ...styles.orb3,
-        animation: 'float 30s ease-in-out infinite'
-      }} />
-
       {/* Toaster Notification */}
       {toaster.show && (
         <div style={{
@@ -842,7 +808,7 @@ const handleInputBlur = (e) => {
               <label style={styles.label}>
                 <Mail size={18} style={{ color: '#8b5cf6' }} />
                 Personal Email ID <span style={styles.required}>*</span>
-                {userEmail && (
+                {lockedEmail && (
                   <span style={{ marginLeft: '8px', fontSize: '12px', color: '#10b981', fontWeight: '500' }}>
                     (Auto-filled from portal)
                   </span>
@@ -855,18 +821,16 @@ const handleInputBlur = (e) => {
                   value={formData.email}
                   onChange={handleChange}
                   onFocus={handleInputFocus}
-                  onBlur={(e) => {
-                    handleInputBlur(e);
-                    handleManualEmailCheck();
-                  }}
+                  onBlur={handleInputBlur}
                   style={{
                     ...styles.input,
-                    ...(isSubmitting ? styles.inputDisabled : {}),
+                    ...((isSubmitting || !!lockedEmail) ? styles.inputDisabled : {}),
                     padding: isMobile ? '12px 14px' : '14px 16px',
                     fontSize: isMobile ? '14px' : '15px'
                   }}
                   placeholder="your.email@example.com"
                   required
+                  readOnly={!!lockedEmail}
                   disabled={isSubmitting}
                 />
                 {isAutoFilling && (
@@ -875,7 +839,7 @@ const handleInputBlur = (e) => {
                     animation: 'spin 1s linear infinite'
                   }} size={20} />
                 )}
-                {userEmail && !isAutoFilling && (
+                {lockedEmail && !isAutoFilling && (
                   <CheckCircle style={{
                     ...styles.inputIcon,
                     color: '#10b981'
@@ -887,8 +851,8 @@ const handleInputBlur = (e) => {
                 fontSize: isTabletOrLarger ? '13px' : '12px'
               }}>
                 {isAutoFilling ? "🔄 Fetching user details..." : 
-                 userEmail ? "✅ Email auto-filled from placement portal" : 
-                 "✨ Your details will auto-fill if you're in our database"}
+                 lockedEmail ? "" : 
+                 "Please log in to use your own account details."}
               </p>
             </div>
 
@@ -1114,7 +1078,7 @@ const handleInputBlur = (e) => {
                   Years of Experience <span style={styles.required}>*</span>
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   name="experience"
                   value={formData.experience}
                   onChange={handleChange}
@@ -1126,7 +1090,9 @@ const handleInputBlur = (e) => {
                     padding: isMobile ? '12px 14px' : '14px 16px',
                     fontSize: isMobile ? '14px' : '15px'
                   }}
-                  placeholder="3 years"
+                  placeholder="3"
+                  min="0"
+                  step="0.1"
                   required
                   disabled={isSubmitting}
                 />
@@ -1137,7 +1103,7 @@ const handleInputBlur = (e) => {
                   Current CTC (Optional)
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   name="ctc"
                   value={formData.ctc}
                   onChange={handleChange}
@@ -1149,7 +1115,9 @@ const handleInputBlur = (e) => {
                     padding: isMobile ? '12px 14px' : '14px 16px',
                     fontSize: isMobile ? '14px' : '15px'
                   }}
-                  placeholder="₹12 LPA (Optional)"
+                  placeholder="12"
+                  min="0"
+                  step="0.01"
                   disabled={isSubmitting}
                 />
               </div>
@@ -1214,39 +1182,6 @@ const handleInputBlur = (e) => {
               }}>
                 Upload your resume (PDF, DOC, DOCX) - Max 5MB
               </p>
-            </div>
-
-            {/* Robot Checkbox */}
-            <div style={{...styles.checkboxWrapper, animation: 'fadeIn 0.5s ease-out 1.3s both'}}>
-              <label 
-                ref={checkboxLabelRef}
-                style={styles.checkboxLabel}
-                onMouseEnter={(e) => {
-                  if (!isSubmitting) {
-                    e.currentTarget.style.background = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSubmitting) {
-                    e.currentTarget.style.background = '#f8fafc';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }
-                }}
-              >
-                <input
-                  type="checkbox"
-                  name="isRobot"
-                  checked={formData.isRobot}
-                  onChange={handleChange}
-                  style={styles.checkboxInput}
-                  required
-                  disabled={isSubmitting}
-                />
-                I'm not a robot
-              </label>
             </div>
 
             {/* Submit Button */}
