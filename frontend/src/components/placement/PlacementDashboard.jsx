@@ -682,28 +682,14 @@ const PlacementDashboard = ({ onBackToHome }) => {
               </div>
             )}
 
-            <button
-              onClick={() => {
-                setView('email-entry');
-                setAccessDenied(false);
-                setEmailInput('');
-              }}
-              style={{
-                marginTop: '30px',
-                padding: '14px 30px',
-                fontSize: '16px',
-                fontWeight: '600',
-                color: 'white',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
-              }}
-            >
-              Try Another Email
-            </button>
+            <p style={{
+              marginTop: '30px',
+              fontSize: '15px',
+              fontWeight: '500',
+              color: '#475569'
+            }}>
+              This account cannot continue to the placement portal.
+            </p>
           </div>
         </div>
       </div>
