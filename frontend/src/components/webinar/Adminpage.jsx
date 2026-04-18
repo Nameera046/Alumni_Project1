@@ -11,8 +11,8 @@ const validateDomain = (value) => {
   if (!trimmed) return "Domain cannot be empty.";
   if (trimmed.length < 3) return "Domain must be at least 3 characters.";
   if (trimmed.length > 50) return "Domain cannot exceed 50 characters.";
-  if (!/^[A-Za-z0-9]+$/.test(trimmed))
-    return "Domain must contain only English letters and numbers. Spaces, punctuation, emojis, and other languages are not allowed.";
+  if (!/^[A-Za-z0-9 ()\[\]{}.,'"\-_&+#@!?;:\/\\]+$/.test(trimmed))
+     return "Domain must contain only English letters, numbers, spaces, and standard punctuation.";
 
   return "";
 };
@@ -816,17 +816,17 @@ const Adminpage = ({ userEmail }) => {
                       value={domain.domain}
                       onChange={(e) => {
                         const newDomains = [...domains];
-                        newDomains[index].domain = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                        newDomains[index].domain = e.target.value;
                         setDomains(newDomains);
                       }}
                       onKeyDown={(e) => {
-                        if (e.key === ' ' || e.key === 'Enter') {
+                        if ( e.key === 'Enter') {
                           e.preventDefault();
                         }
                       }}
                       onPaste={(e) => {
                         e.preventDefault();
-                        const paste = e.clipboardData.getData('text').replace(/[^A-Za-z0-9]/g, '');
+                        const paste = e.clipboardData.getData('text');
                         const newDomains = [...domains];
                         newDomains[index].domain = paste;
                         setDomains(newDomains);
@@ -1204,7 +1204,7 @@ const Adminpage = ({ userEmail }) => {
                                             setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: '' });
                                         }
                                     }}
-                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}
                                     onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z]/g, ''); setDeptCoordinator({ ...deptCoordinator, name: paste }); setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: '' }); }}
                                     onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, name: e.target.value.trim() })}
                                 />
@@ -1219,9 +1219,9 @@ const Adminpage = ({ userEmail }) => {
                                     placeholder="Enter email to auto-fetch details"
                                     className={`input-field ${deptCoordinatorErrors.email ? 'error' : ''}`}
                                     value={deptCoordinator.email}
-                                    onChange={(e) => handleDeptCoordinatorEmailChange(e.target.value.replace(/[^A-Za-z0-9@.]/g, ''))}
+                                    onChange={(e) => handleDeptCoordinatorEmailChange(e.target.value.replace(/[^A-Za-z0-9@._+\-]/g, ''))}
                                     onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
-                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z0-9@.]/g, ''); handleDeptCoordinatorEmailChange(paste); }}
+                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z0-9@._+\-]/g, ''); handleDeptCoordinatorEmailChange(paste); }}
                                     onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, email: e.target.value.trim() })}
                                     disabled={deptCoordinatorLoading}
                                 />
