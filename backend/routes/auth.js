@@ -582,15 +582,16 @@ router.get('/', async (req, res) => {
         } else if (hasMenteeRole) {
           userType = 'mentee';
           console.log('✅ Setting userType to mentee');
-        } else if (hasAlumniRole) {
-          userType = 'alumni';
-          console.log('✅ Setting userType to alumni');
-        } else if (hasStudentRole) {
-          userType = 'student';
-          console.log('✅ Setting userType to student');
         } else {
-          userType = 'assigned';
-          console.log('✅ Setting userType to assigned');
+          // For alumni/student or any other non-mentor/mentee roles,
+          // enforce graduation-year-based classification:
+          // graduationYear < currentYear => alumni, else student
+          userType = determineUserType(user);
+          if (hasAlumniRole || hasStudentRole) {
+            console.log(`✅ Alumni/Student role detected - resolved by graduation year: ${userType}`);
+          } else {
+            console.log(`✅ Non mentor/mentee role - resolved by graduation year: ${userType}`);
+          }
         }
       }
       

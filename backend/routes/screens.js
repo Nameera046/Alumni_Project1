@@ -3,6 +3,53 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 
+const extractYearFromValue = (value) => {
+  if (value === undefined || value === null) return null;
+  const yearMatch = String(value).match(/\b(19|20)\d{2}\b/);
+  return yearMatch ? parseInt(yearMatch[0], 10) : null;
+};
+
+const findGraduationYear = (user) => {
+  const basicCandidates = [user.basic?.label, user.basic?.batch];
+  for (const value of basicCandidates) {
+    const year = extractYearFromValue(value);
+    if (year) return year;
+  }
+
+  const rootCandidates = [
+    user.label,
+    user.batch,
+    user.graduationYear,
+    user.passingYear,
+    user.yearOfPassing,
+    user.batchYear,
+    user.academicYear
+  ];
+  for (const value of rootCandidates) {
+    const year = extractYearFromValue(value);
+    if (year) return year;
+  }
+
+  if (Array.isArray(user.education_details)) {
+    for (const edu of user.education_details) {
+      const eduCandidates = [
+        edu?.passing_year,
+        edu?.yearOfPassing,
+        edu?.graduationYear,
+        edu?.batch,
+        edu?.end_year,
+        edu?.start_year
+      ];
+      for (const value of eduCandidates) {
+        const year = extractYearFromValue(value);
+        if (year) return year;
+      }
+    }
+  }
+
+  return null;
+};
+
 // ==========================================
 // ONE-TIME GRANT ACCESS FOR anithait@nec.edu.in to screen 12 (roleId 12)
 // ==========================================
@@ -86,17 +133,7 @@ router.get('/user-access', async (req, res) => {
       console.log(`User has assigned roles: ${roleIds.join(', ')}`);
     } else {
       // Step 2: No assigned roles - determine default role based on user type
-      
-      // Extract graduation year to determine if alumni or student
-      let graduationYear = null;
-      if (user.education_details && Array.isArray(user.education_details)) {
-        const education = user.education_details.find(edu => 
-          edu.passing_year || edu.yearOfPassing || edu.graduationYear
-        );
-        if (education) {
-          graduationYear = education.passing_year || education.yearOfPassing || education.graduationYear;
-        }
-      }
+      const graduationYear = findGraduationYear(user);
       
       // Check if admin (hardcoded for now, but should come from roles table)
       if (cleanEmail === 'admin@gmail.com') {

@@ -36,6 +36,17 @@ router.get('/member-by-email', async (req, res) => {
       const departments = ["CSE", "ECE", "MECH", "EEE", "CIVIL", "AIDS", "CE", "CS", "CS&E", "CSEH", "AEI", "IT"];
 
       const upperLabel = String(label).toUpperCase();
+      const compactLabel = upperLabel.replace(/[^A-Z]/g, '');
+
+      // Handle AI & DS variants such as "AI & DS", "AI&DS", "A.I & D.S", etc.
+      if (
+        upperLabel.includes('ARTIFICIAL INTELLIGENCE') && upperLabel.includes('DATA SCIENCE')
+      ) {
+        return 'AI & DS';
+      }
+      if (compactLabel.includes('AIDS') || compactLabel.includes('AIDATASCIENCE')) {
+        return 'AI & DS';
+      }
 
       for (const dept of departments) {
         try {
@@ -63,6 +74,10 @@ router.get('/member-by-email', async (req, res) => {
         member.basic?.course,
         member.education_details?.[0]?.department,
         member.education_details?.[0]?.dept,
+        member.education_details?.[0]?.course,
+        member.education_details?.[0]?.branch,
+        member.academic_details?.department,
+        member.academic_details?.dept,
         member.department,
         member.dept,
         member.contact_details?.department,
@@ -80,6 +95,8 @@ router.get('/member-by-email', async (req, res) => {
 
       try {
         const fullText = JSON.stringify(member).toUpperCase();
+        const fullTextDept = extractDepartment(fullText);
+        if (fullTextDept) return fullTextDept;
         const fallbackOrder = ["CSE", "ECE", "MECH", "EEE", "CIVIL", "AIDS", "CE", "CS", "IT"];
 
         for (const dept of fallbackOrder) {
@@ -195,6 +212,17 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
       const departments = ["CSE", "ECE", "MECH", "EEE", "CIVIL", "AIDS", "CE", "CS", "CS&E", "CSEH", "AEI", "IT"];
 
       const upperLabel = String(label).toUpperCase();
+      const compactLabel = upperLabel.replace(/[^A-Z]/g, '');
+
+      // Handle AI & DS variants such as "AI & DS", "AI&DS", "A.I & D.S", etc.
+      if (
+        upperLabel.includes('ARTIFICIAL INTELLIGENCE') && upperLabel.includes('DATA SCIENCE')
+      ) {
+        return 'AI & DS';
+      }
+      if (compactLabel.includes('AIDS') || compactLabel.includes('AIDATASCIENCE')) {
+        return 'AI & DS';
+      }
 
       for (const dept of departments) {
         try {
@@ -222,6 +250,10 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
         member.basic?.course,
         member.education_details?.[0]?.department,
         member.education_details?.[0]?.dept,
+        member.education_details?.[0]?.course,
+        member.education_details?.[0]?.branch,
+        member.academic_details?.department,
+        member.academic_details?.dept,
         member.department,
         member.dept,
         member.contact_details?.department,
@@ -239,6 +271,8 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
 
       try {
         const fullText = JSON.stringify(member).toUpperCase();
+        const fullTextDept = extractDepartment(fullText);
+        if (fullTextDept) return fullTextDept;
         const fallbackOrder = ["CSE", "ECE", "MECH", "EEE", "CIVIL", "AIDS", "CE", "CS", "IT"];
 
         for (const dept of fallbackOrder) {

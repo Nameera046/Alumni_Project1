@@ -29,6 +29,52 @@ const decryptEmail = (encryptedEmail) => {
   }
 };
 
+const extractYearFromValue = (value) => {
+  if (value === undefined || value === null) return null;
+  const match = String(value).match(/\b(19|20)\d{2}\b/);
+  return match ? parseInt(match[0], 10) : null;
+};
+
+const determineUserTypeFromMember = (member) => {
+  const currentYear = new Date().getFullYear();
+
+  const candidates = [
+    member?.basic?.label,
+    member?.basic?.batch,
+    member?.label,
+    member?.batch,
+    member?.graduationYear,
+    member?.passingYear,
+    member?.yearOfPassing,
+    member?.batchYear,
+    member?.academicYear
+  ];
+
+  for (const value of candidates) {
+    const year = extractYearFromValue(value);
+    if (year) return year < currentYear ? 'alumni' : 'student';
+  }
+
+  if (Array.isArray(member?.education_details)) {
+    for (const edu of member.education_details) {
+      const eduCandidates = [
+        edu?.passing_year,
+        edu?.yearOfPassing,
+        edu?.graduationYear,
+        edu?.batch,
+        edu?.end_year,
+        edu?.start_year
+      ];
+      for (const value of eduCandidates) {
+        const year = extractYearFromValue(value);
+        if (year) return year < currentYear ? 'alumni' : 'student';
+      }
+    }
+  }
+
+  return 'student';
+};
+
 /*WebinarDashboard.jsx
   
   - Single-file React component that implements ALL requested options:
@@ -277,6 +323,7 @@ function DashboardShell() {
   const [phaseLoading, setPhaseLoading] = useState(true);
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
+  const [userType, setUserType] = useState('student');
   const [isAdmin, setIsAdmin] = useState(false);
   const [coordinators, setCoordinators] = useState([]);
   const [speakers, setSpeakers] = useState([]);
@@ -358,16 +405,20 @@ function DashboardShell() {
     }
     
     if (email) {
-      // Fetch user details
-      fetch(`${API_BASE_URL}/api/member-by-email?email=${encodeURIComponent(email)}`)
+      // Fetch user details + user type (graduation year based)
+      fetch(`${API_BASE_URL}/api/members/email/${encodeURIComponent(email)}`)
         .then(response => response.json())
-        .then(memberData => {
-          if (memberData.found) {
-            setUserName(memberData.name);
+        .then(data => {
+          if (data.success && data.member) {
+            setUserName(data.member.name || '');
+            setUserType(determineUserTypeFromMember(data.member));
+          } else {
+            setUserType('student');
           }
         })
         .catch(error => {
           console.error('Error fetching user details:', error);
+          setUserType('student');
         });
       // Check if user is admin (specific email only)
       fetch(`${API_BASE_URL}/api/coordinators`)
@@ -375,6 +426,15 @@ function DashboardShell() {
         .then(coordinators => {
           setCoordinators(coordinators);
           const normalizedEmail = email.toLowerCase().trim();
+          const matchingCoordinator = coordinators.find(
+            coord => coord?.email?.toLowerCase().trim() === normalizedEmail
+          );
+
+          // Fallback display name for coordinator accounts not present in Member collection
+          if (matchingCoordinator?.name && (!userName || userName === 'User')) {
+            setUserName(matchingCoordinator.name);
+          }
+
           const isAdmin = coordinators.some(
             coord =>
               coord?.email?.toLowerCase().trim() === normalizedEmail &&
@@ -862,12 +922,20 @@ function DashboardShell() {
   const paged = paginate(tableData, page, pageSize);
   const totalPages = Math.max(1, Math.ceil(tableData.length / pageSize));
   const normalizedUserEmail = (userEmail || '').toLowerCase().trim();
-  const isCoordinatorUser = coordinators.some(
-    c => c?.email?.toLowerCase().trim() === normalizedUserEmail
+  const isStudentCoordinatorUser = coordinators.some(
+    c => c?.email?.toLowerCase().trim() === normalizedUserEmail && c?.role === 'student'
   );
+  const isDepartmentCoordinatorUser = coordinators.some(
+    c => c?.email?.toLowerCase().trim() === normalizedUserEmail && c?.role === 'department'
+  );
+  const isCoordinatorUser = isStudentCoordinatorUser || isDepartmentCoordinatorUser;
   const isSpeakerUser = speakers.some(
     speaker => speaker?.email?.toLowerCase().trim() === normalizedUserEmail
   );
+  const canShowStudentRequestForm =
+    isAdmin ||
+    isStudentCoordinatorUser ||
+    (userType === 'student' && !isDepartmentCoordinatorUser && !isSpeakerUser);
 
   return (
     <div className={`wb-root ${collegeTheme === 'college' ? 'theme-college' : ''}`}>
@@ -1103,7 +1171,7 @@ function DashboardShell() {
   <h3 className="qa-title">Quick Actions</h3>
 
   <div className="qa-grid">
-  {(speakers.length === 0 || !isSpeakerUser) && (
+  {canShowStudentRequestForm && (
     <div className="qa-card" onClick={() => {
       if (!userEmail) {
         alert("Please log in first");
@@ -1165,7 +1233,7 @@ function DashboardShell() {
         </p>
     </div>
   )}
-  {(isAdmin || isSpeakerUser) && (
+  {!isCoordinatorUser && (isAdmin || isSpeakerUser || userType === 'alumni') && (
     <div className="qa-card" onClick={() => {
       if (!userEmail) {
         alert("Please log in first");

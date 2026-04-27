@@ -14,12 +14,24 @@ const extractYearFromLabel = (label) => {
 };
 
 const findGraduationYear = (user) => {
+  if (user.basic && user.basic.label) {
+    const year = extractYearFromLabel(user.basic.label);
+    if (year) return year;
+  }
+
+  if (user.basic && user.basic.batch) {
+    const year = extractYearFromLabel(user.basic.batch);
+    if (year) return year;
+  }
+
   const fieldsToCheck = [
     { name: 'label', value: user.label },
     { name: 'batch', value: user.batch },
     { name: 'graduationYear', value: user.graduationYear },
     { name: 'passingYear', value: user.passingYear },
-    { name: 'yearOfPassing', value: user.yearOfPassing }
+    { name: 'yearOfPassing', value: user.yearOfPassing },
+    { name: 'batchYear', value: user.batchYear },
+    { name: 'academicYear', value: user.academicYear }
   ];
   
   for (const field of fieldsToCheck) {
@@ -31,8 +43,18 @@ const findGraduationYear = (user) => {
   
   if (user.education_details && Array.isArray(user.education_details)) {
     for (const edu of user.education_details) {
-      if (edu.end_year) {
-        const year = extractYearFromLabel(String(edu.end_year));
+      const eduFields = [
+        edu.passing_year,
+        edu.yearOfPassing,
+        edu.graduationYear,
+        edu.batch,
+        edu.end_year,
+        edu.start_year
+      ];
+
+      for (const value of eduFields) {
+        if (value === undefined || value === null || value === 0 || value === '0') continue;
+        const year = extractYearFromLabel(String(value));
         if (year) return year;
       }
     }
@@ -294,22 +316,16 @@ router.get('/', async (req, res) => {
         isCoordinator = true;
         console.log('⚙️ Placement Coordinator detected');
       }
-      else if (hasAlumni) {
-        userType = 'alumni';
-        isCoordinator = false;
-        console.log('🎓 Alumni detected');
-      }
-      else if (hasStudent) {
-        userType = 'student';
-        isCoordinator = false;
-        console.log('📚 Student detected');
-      }
       else {
-        // For any other roles (like Mentorship Coordinator - roleId 7)
-        // Determine based on graduation year
+        // For alumni/student or other non-coordinator roles, use graduation year rule:
+        // graduationYear < currentYear => alumni, else student
         userType = determineUserType(user);
         isCoordinator = false;
-        console.log(`📅 Other role (${roleIds}) - using graduation year: ${userType}`);
+        if (hasAlumni || hasStudent) {
+          console.log(`📅 Alumni/Student role detected (${roleIds}) - resolved by graduation year: ${userType}`);
+        } else {
+          console.log(`📅 Other role (${roleIds}) - using graduation year: ${userType}`);
+        }
       }
       
     } else {

@@ -20,6 +20,23 @@ export default function StudentRequestForm() {
   const { email: encodedEmail } = useParams();
   const [searchParams] = useSearchParams();
 
+  const normalizeDepartment = (value) => {
+    const raw = (value || '').toString().trim();
+    if (!raw) return '';
+    const upper = raw.toUpperCase();
+    const compact = upper.replace(/[^A-Z]/g, '');
+
+    if (
+      upper.includes('ARTIFICIAL INTELLIGENCE') && upper.includes('DATA SCIENCE')
+    ) {
+      return 'AI & DS';
+    }
+    if (compact === 'AIDS' || compact.includes('AIDATASCIENCE')) {
+      return 'AI & DS';
+    }
+    return raw;
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -78,7 +95,7 @@ export default function StudentRequestForm() {
             ...prev,
             name: data.name || "",
             contact: data.contact_no || "",
-            department: data.department || ""
+            department: normalizeDepartment(data.department)
           }));
         }
 
@@ -282,7 +299,7 @@ export default function StudentRequestForm() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="Enter your email"
+                  placeholder="Auto fetched from email..."
                   className="input-field"
                    readOnly
                 />

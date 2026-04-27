@@ -13,6 +13,12 @@ function extractDepartment(label) {
   if (!label) return "";
   const departments = ["CSE", "ECE", "MECH", "EEE", "CIVIL", "AIDS", "CE", "CS", "CS&E", "CSEH", "AEI", "IT"];
   const upperLabel = String(label).toUpperCase();
+  const compactLabel = upperLabel.replace(/[^A-Z]/g, '');
+
+  // Handle AI & DS variants such as "AI & DS", "AI&DS", "A.I & D.S", etc.
+  if (upperLabel.includes('ARTIFICIAL INTELLIGENCE') && upperLabel.includes('DATA SCIENCE')) return 'AI & DS';
+  if (compactLabel.includes('AIDS') || compactLabel.includes('AIDATASCIENCE')) return 'AI & DS';
+
   for (const dept of departments) {
     try {
       const re = new RegExp("\\b" + dept.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&") + "\\b", 'i');
@@ -34,6 +40,12 @@ function getDepartmentFromMember(member) {
     member.basic?.dept,
     member.basic?.label,
     member.basic?.course,
+    member.education_details?.[0]?.department,
+    member.education_details?.[0]?.dept,
+    member.education_details?.[0]?.course,
+    member.education_details?.[0]?.branch,
+    member.academic_details?.department,
+    member.academic_details?.dept,
     member.department,
     member.dept,
     member.contact_details?.department,
@@ -48,6 +60,8 @@ function getDepartmentFromMember(member) {
   }
   try {
     const fullText = JSON.stringify(member).toUpperCase();
+    const fullTextDept = extractDepartment(fullText);
+    if (fullTextDept) return fullTextDept;
     const fallbackOrder = ["CSE", "ECE", "MECH", "EEE", "CIVIL", "AIDS", "CE", "CS", "IT"];
     for (const dept of fallbackOrder) {
       const re = new RegExp("\\b" + dept.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&") + "\\b", 'i');
@@ -63,7 +77,7 @@ function getDepartmentFromMember(member) {
 // Add a new coordinator
 router.post('/add', async (req, res) => {
   try {
-    const { email, role } = req.body;
+    const { email, role, name, department, phoneNumber } = req.body;
 
     if (!email || !role) {
       return res.status(400).json({ message: 'Email and role are required' });
@@ -80,26 +94,43 @@ router.post('/add', async (req, res) => {
       return res.status(400).json({ message: 'Coordinator with this email already exists' });
     }
 
-    // Fetch member details from Member collection
+    // Fetch member details from Member collection (fallback values)
     let memberDetails = null;
     try {
-      const member = await req.Member.findOne({ 'basic.email_id': email.toLowerCase() });
+      const member = await req.Member.findOne({
+        'basic.email_id': { $regex: new RegExp(`^${email}$`, 'i') }
+      });
       if (member) {
         memberDetails = {
-          name: member.basic?.name,
-          department: getDepartmentFromMember(member),
-          phoneNumber: member.contact_details?.mobile
+          name: (member.basic?.name || '').trim(),
+          department: (getDepartmentFromMember(member) || '').trim(),
+          phoneNumber: (
+            member.contact_details?.mobile ||
+            member.contact_details?.phone ||
+            member.mobile ||
+            member.phone ||
+            ''
+          ).toString().trim()
         };
       }
     } catch (error) {
       console.log('Member not found, proceeding without member details');
     }
 
+    const manualDetails = {
+      name: (name || '').toString().trim(),
+      department: (department || '').toString().trim(),
+      phoneNumber: (phoneNumber || '').toString().trim()
+    };
+
     // Create new coordinator
     const coordinator = new req.Coordinator({
       email: email.toLowerCase(),
       role,
-      ...memberDetails
+      // Prefer explicitly submitted details; fallback to member lookup details
+      name: manualDetails.name || memberDetails?.name || '',
+      department: manualDetails.department || memberDetails?.department || '',
+      phoneNumber: manualDetails.phoneNumber || memberDetails?.phoneNumber || ''
     });
 
     await coordinator.save();

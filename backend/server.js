@@ -8,7 +8,7 @@ const dotenv = require('dotenv');
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json({ limit: "30mb" }));
-//app.use(cors());
+// app.use(cors());
 //SSO ROUTES
 const webinarSSORoutes = require('./single-sign-on/routes/webinar');
 app.use('/api/webinar', webinarSSORoutes);
@@ -74,7 +74,10 @@ const companyMappingRoutes = require('./routes/companyMapping');
 const authPlacementRoutes = require('./routes/authPlacement');
 // ========== IMPORT ADMIN ROUTES ==========
 const adminRoutes = require('./routes/admin'); // Assuming your admin routes file is in ./routes/admin.js
+
+
 // Middleware 
+
 //Cors For Producion
 app.use(cors({ origin: ["https://necalumni.nec.edu.in", "https://necalumni.nec.edu.in/alumnimain"], credentials: true }));
 app.use(express.urlencoded({ extended: true, limit: "30mb" }));
@@ -1048,6 +1051,12 @@ function extractDepartment(label) {
   if (!label) return "";
   const departments = ["CSE", "ECE", "MECH", "EEE", "CIVIL", "AIDS", "CE", "CS", "CS&E", "CSEH", "AEI", "IT"];
   const upperLabel = String(label).toUpperCase();
+  const compactLabel = upperLabel.replace(/[^A-Z]/g, '');
+
+  // Handle AI & DS variants such as "AI & DS", "AI&DS", "A.I & D.S", etc.
+  if (upperLabel.includes('ARTIFICIAL INTELLIGENCE') && upperLabel.includes('DATA SCIENCE')) return 'AI & DS';
+  if (compactLabel.includes('AIDS') || compactLabel.includes('AIDATASCIENCE')) return 'AI & DS';
+
   for (const dept of departments) {
     try {
       const re = new RegExp("\\b" + dept.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&") + "\\b", 'i');
@@ -1069,6 +1078,12 @@ function getDepartmentFromMember(member) {
     member.basic?.dept,
     member.basic?.label,
     member.basic?.course,
+    member.education_details?.[0]?.department,
+    member.education_details?.[0]?.dept,
+    member.education_details?.[0]?.course,
+    member.education_details?.[0]?.branch,
+    member.academic_details?.department,
+    member.academic_details?.dept,
     member.department,
     member.dept,
     member.contact_details?.department,
@@ -1083,6 +1098,8 @@ function getDepartmentFromMember(member) {
   }
   try {
     const fullText = JSON.stringify(member).toUpperCase();
+    const fullTextDept = extractDepartment(fullText);
+    if (fullTextDept) return fullTextDept;
     const fallbackOrder = ["CSE", "ECE", "MECH", "EEE", "CIVIL", "AIDS", "CE", "CS", "IT"];
     for (const dept of fallbackOrder) {
       const re = new RegExp("\\b" + dept.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&") + "\\b", 'i');
