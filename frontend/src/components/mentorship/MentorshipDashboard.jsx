@@ -1,4 +1,4 @@
-// pages/MentorshipDashboard.js - WITH IMPROVED MEETINGS UI & FEEDBACK MANAGEMENT PHASE FILTER
+// pages/MentorshipDashboard.js - WITH MEETING EMAIL FILTER & DOWNLOAD BUTTON RIGHT CORNER
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +21,7 @@ export default function MentorshipDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [filteredAssignments, setFilteredAssignments] = useState([]);
   const [meetings, setMeetings] = useState([]);
+  const [filteredMeetings, setFilteredMeetings] = useState([]);
   const [meetingStats, setMeetingStats] = useState({
     total: 0,
     scheduled: 0,
@@ -33,7 +34,8 @@ export default function MentorshipDashboard() {
   const [meetingFilters, setMeetingFilters] = useState({
     dateFrom: '',
     dateTo: '',
-    status: 'all'
+    status: 'all',
+    email: ''  // ✅ ADDED EMAIL FILTER
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -105,6 +107,321 @@ export default function MentorshipDashboard() {
 
   // Check if user is coordinator
   const isCoordinator = true;
+
+  // Helper function to extract phone number from user object
+  const extractPhoneNumber = (user) => {
+    if (!user) return 'N/A';
+    
+    // Check contact_details.mobile (from your data structure)
+    if (user.contact_details) {
+      if (user.contact_details.mobile && user.contact_details.mobile !== '') 
+        return user.contact_details.mobile;
+      if (user.contact_details.phone && user.contact_details.phone !== '') 
+        return user.contact_details.phone;
+      if (user.contact_details.home && user.contact_details.home !== '') 
+        return user.contact_details.home;
+    }
+    
+    // Check direct fields
+    if (user.mobile && user.mobile !== '') return user.mobile;
+    if (user.phone && user.phone !== '') return user.phone;
+    if (user.phoneNumber && user.phoneNumber !== '') return user.phoneNumber;
+    if (user.contactNo && user.contactNo !== '') return user.contactNo;
+    if (user.contactNumber && user.contactNumber !== '') return user.contactNumber;
+    
+    // Check for phone in nested objects
+    if (user.profile && user.profile.contact_details) {
+      if (user.profile.contact_details.mobile && user.profile.contact_details.mobile !== '') 
+        return user.profile.contact_details.mobile;
+      if (user.profile.contact_details.phone && user.profile.contact_details.phone !== '') 
+        return user.profile.contact_details.phone;
+    }
+    
+    // Check if the user object has a phone field with any variation
+    const phoneFields = ['phone_number', 'contact_no', 'contactnumber', 'phonenumber', 'cell', 'cellphone'];
+    for (const field of phoneFields) {
+      if (user[field] && user[field] !== '') return user[field];
+    }
+    
+    return 'N/A';
+  };
+
+  // Get display phone number from mentor/mentee object
+  const getDisplayPhoneNumber = (item) => {
+    if (item.phone_number && item.phone_number !== 'N/A') return item.phone_number;
+    if (item.phoneNumber && item.phoneNumber !== 'N/A') return item.phoneNumber;
+    if (item.contact_details?.mobile) return item.contact_details.mobile;
+    if (item.contact_details?.phone) return item.contact_details.phone;
+    if (item.mobile) return item.mobile;
+    if (item.phone) return item.phone;
+    return 'N/A';
+  };
+
+  // Apply meeting filters including email
+  const applyMeetingFilters = () => {
+    let filtered = [...meetings];
+    
+    // Filter by date range
+    if (meetingFilters.dateFrom) {
+      const fromDate = new Date(meetingFilters.dateFrom);
+      filtered = filtered.filter(meeting => {
+        const meetingDate = meeting.meeting_dates?.[0]?.date;
+        return meetingDate && new Date(meetingDate) >= fromDate;
+      });
+    }
+    
+    if (meetingFilters.dateTo) {
+      const toDate = new Date(meetingFilters.dateTo);
+      filtered = filtered.filter(meeting => {
+        const meetingDate = meeting.meeting_dates?.[0]?.date;
+        return meetingDate && new Date(meetingDate) <= toDate;
+      });
+    }
+    
+    // Filter by status
+    if (meetingFilters.status !== 'all') {
+      filtered = filtered.filter(meeting => 
+        meeting.status?.toLowerCase() === meetingFilters.status.toLowerCase()
+      );
+    }
+    
+    // ✅ FILTER BY EMAIL (mentor email or mentee email)
+    if (meetingFilters.email && meetingFilters.email.trim() !== '') {
+      const searchEmail = meetingFilters.email.toLowerCase().trim();
+      filtered = filtered.filter(meeting => {
+        // Check mentor email
+        const mentorEmail = meeting.mentorDetails?.email?.toLowerCase() || '';
+        if (mentorEmail.includes(searchEmail)) return true;
+        
+        // Check any mentee email
+        if (meeting.mentees && meeting.mentees.length > 0) {
+          return meeting.mentees.some(mentee => 
+            mentee.email?.toLowerCase().includes(searchEmail)
+          );
+        }
+        return false;
+      });
+    }
+    
+    setFilteredMeetings(filtered);
+  };
+
+  // Fetch meetings with filters
+  const fetchMeetings = async () => {
+    try {
+      const params = {};
+      if (meetingFilters.dateFrom) params.dateFrom = meetingFilters.dateFrom;
+      if (meetingFilters.dateTo) params.dateTo = meetingFilters.dateTo;
+      if (meetingFilters.status !== 'all') params.status = meetingFilters.status;
+      
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/meetings`, { params });
+      if (res.data && res.data.success) {
+        setMeetings(res.data.meetings || []);
+        setFilteredMeetings(res.data.meetings || []);
+        if (res.data.stats) {
+          setMeetingStats(res.data.stats);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching meetings:", err);
+      setMeetings([]);
+      setFilteredMeetings([]);
+      setMeetingStats({ total: 0, scheduled: 0, completed: 0, cancelled: 0 });
+    }
+  };
+
+  const handleMeetingFilterChange = (e) => {
+    const { name, value } = e.target;
+    const updatedFilters = {
+      ...meetingFilters,
+      [name]: value
+    };
+    setMeetingFilters(updatedFilters);
+    
+    // If email filter is being cleared or changed, apply filters immediately
+    if (name === 'email') {
+      setTimeout(() => applyMeetingFilters(), 0);
+    }
+  };
+
+  const applyMeetingFiltersAndFetch = () => {
+    if (meetingFilters.email && meetingFilters.email.trim() !== '') {
+      // Apply client-side filter
+      applyMeetingFilters();
+    } else {
+      // Fetch from server if no email filter
+      fetchMeetings();
+    }
+  };
+
+  const resetMeetingFilters = () => {
+    setMeetingFilters({
+      dateFrom: '',
+      dateTo: '',
+      status: 'all',
+      email: ''  // ✅ RESET EMAIL FILTER
+    });
+    setTimeout(() => fetchMeetings(), 100);
+  };
+
+  // DOWNLOAD FUNCTIONS
+  const downloadCSV = (data, filename, headers) => {
+    if (!data || data.length === 0) {
+      alert('No data available to download');
+      return;
+    }
+
+    // Create CSV rows
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    for (const row of data) {
+      const values = headers.map(header => {
+        const value = row[header.toLowerCase().replace(/\s/g, '_')] || '';
+        // Escape quotes and wrap in quotes if contains comma
+        const escaped = String(value).replace(/"/g, '""');
+        return escaped.includes(',') ? `"${escaped}"` : escaped;
+      });
+      csvRows.push(values.join(','));
+    }
+    
+    // Create blob and download
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Download Mentors Details with Phone Numbers
+  const downloadMentors = () => {
+    const dataToDownload = filteredMentors.length > 0 ? filteredMentors : mentors;
+    
+    if (dataToDownload.length === 0) {
+      alert('No mentor data available to download');
+      return;
+    }
+
+    const headers = ['ID', 'Name', 'Email', 'Phone Number', 'Description', 'Phase', 'Status', 'Joined Date'];
+    
+    const formattedData = dataToDownload.map(mentor => ({
+      id: mentor._id?.toString().slice(-8) || 'N/A',
+      name: (mentor.name && mentor.name !== 'N/A') ? mentor.name : getNameFromEmail(mentor.email || mentor.email_id),
+      email: mentor.email || mentor.email_id || 'N/A',
+      phone_number: getDisplayPhoneNumber(mentor),
+      description: (mentor.description && mentor.description !== 'N/A') ? mentor.description : (mentor.supportDescription || '—'),
+      phase: mentor.phaseId ? `Phase ${mentor.phaseId}` : 'N/A',
+      status: mentor.status || 'pending',
+      joined_date: formatDate(mentor.createdAt || mentor.profile_updated_on)
+    }));
+    
+    downloadCSV(formattedData, 'mentors_details', headers);
+  };
+
+  // Download Mentees Details with Phone Numbers
+  const downloadMentees = () => {
+    const dataToDownload = filteredMentees.length > 0 ? filteredMentees : mentees;
+    
+    if (dataToDownload.length === 0) {
+      alert('No mentee data available to download');
+      return;
+    }
+
+    const headers = ['ID', 'Email', 'Phone Number', 'Area of Interest', 'Description', 'Phase', 'Status', 'Request Date'];
+    
+    const formattedData = dataToDownload.map(mentee => ({
+      id: mentee._id?.toString().slice(-8) || 'N/A',
+      email: mentee.email || mentee.email_id || 'N/A',
+      phone_number: getDisplayPhoneNumber(mentee),
+      area_of_interest: mentee.area_of_interest || mentee.areaOfInterest || 'Not specified',
+      description: mentee.description && mentee.description !== 'N/A' ? mentee.description : '—',
+      phase: mentee.phaseId ? `Phase ${mentee.phaseId}` : 'N/A',
+      status: mentee.status || 'pending',
+      request_date: formatDate(mentee.createdAt || mentee.profile_updated_on)
+    }));
+    
+    downloadCSV(formattedData, 'mentees_details', headers);
+  };
+
+  // Download Assignments (Mentor-Mentee Assignments) with Phone Numbers
+  const downloadAssignments = () => {
+    const dataToDownload = filteredAssignments.length > 0 ? filteredAssignments : assignments;
+    
+    if (dataToDownload.length === 0) {
+      alert('No assignment data available to download');
+      return;
+    }
+
+    const headers = ['Mentor Name', 'Mentor Email', 'Mentor Phone', 'Mentees Count', 'Mentees List (with Phone)', 'Phase', 'Assignment Date', 'Assignment ID'];
+    
+    const formattedData = dataToDownload.map(assignment => {
+      // Get mentor phone
+      const mentorPhone = getDisplayPhoneNumber(assignment.mentorDetails);
+      
+      // Create mentees list with phone numbers
+      const menteesList = assignment.mentees && assignment.mentees.length > 0
+        ? assignment.mentees.map(m => {
+            const menteePhone = getDisplayPhoneNumber(m);
+            return `${m.name || 'Mentee'} (${m.email || m.email_id || 'No email'}) - Phone: ${menteePhone}`;
+          }).join('; ')
+        : 'No mentees assigned';
+      
+      return {
+        mentor_name: assignment.mentorDetails?.name || getNameFromEmail(assignment.mentorDetails?.email || assignment.mentorDetails?.email_id) || 'N/A',
+        mentor_email: assignment.mentorDetails?.email || assignment.mentorDetails?.email_id || 'N/A',
+        mentor_phone: mentorPhone,
+        mentees_count: assignment.mentees?.length || 0,
+        mentees_list: menteesList,
+        phase: assignment.phaseId ? `Phase ${assignment.phaseId}` : (assignment.mentorDetails?.phaseId ? `Phase ${assignment.mentorDetails.phaseId}` : 'N/A'),
+        assignment_date: formatDate(assignment.createdAt),
+        assignment_id: assignment._id?.toString().slice(-8) || 'N/A'
+      };
+    });
+    
+    downloadCSV(formattedData, 'mentor_mentee_assignments', headers);
+  };
+
+  // Download Meetings with Phone Numbers
+  const downloadMeetings = () => {
+    const dataToDownload = filteredMeetings.length > 0 ? filteredMeetings : meetings;
+    
+    if (dataToDownload.length === 0) {
+      alert('No meeting data available to download');
+      return;
+    }
+
+    const headers = ['Mentor Name', 'Mentor Email', 'Mentor Phone', 'Meeting Date', 'Meeting Time', 'Status', 'Platform', 'Agenda', 'Mentees Count', 'Mentees List'];
+    
+    const formattedData = dataToDownload.map(meeting => {
+      const meetingDate = meeting.meeting_dates?.[0]?.date || 'N/A';
+      const mentorPhone = getDisplayPhoneNumber(meeting.mentorDetails);
+      const menteesList = meeting.mentees && meeting.mentees.length > 0
+        ? meeting.mentees.map(m => `${m.name || 'Mentee'} (${m.email || 'No email'})`).join('; ')
+        : 'No mentees assigned';
+      
+      return {
+        mentor_name: meeting.mentorDetails?.name || 'N/A',
+        mentor_email: meeting.mentorDetails?.email || 'N/A',
+        mentor_phone: mentorPhone,
+        meeting_date: formatDate(meetingDate),
+        meeting_time: meeting.meeting_time || 'N/A',
+        status: meeting.status || 'N/A',
+        platform: meeting.platform || 'N/A',
+        agenda: meeting.agenda || 'N/A',
+        mentees_count: meeting.mentees?.length || 0,
+        mentees_list: menteesList
+      };
+    });
+    
+    downloadCSV(formattedData, 'meetings_details', headers);
+  };
 
   // Fetch all phases and current phase
   const fetchCurrentPhase = async () => {
@@ -443,28 +760,6 @@ export default function MentorshipDashboard() {
       console.error("Error fetching assignments:", err);
       setAssignments([]);
       setFilteredAssignments([]);
-    }
-  };
-
-  // Fetch meetings with filters
-  const fetchMeetings = async () => {
-    try {
-      const params = {};
-      if (meetingFilters.dateFrom) params.dateFrom = meetingFilters.dateFrom;
-      if (meetingFilters.dateTo) params.dateTo = meetingFilters.dateTo;
-      if (meetingFilters.status !== 'all') params.status = meetingFilters.status;
-      
-      const res = await axios.get(`${API_BASE_URL}/api/dashboard/meetings`, { params });
-      if (res.data && res.data.success) {
-        setMeetings(res.data.meetings || []);
-        if (res.data.stats) {
-          setMeetingStats(res.data.stats);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching meetings:", err);
-      setMeetings([]);
-      setMeetingStats({ total: 0, scheduled: 0, completed: 0, cancelled: 0 });
     }
   };
 
@@ -830,23 +1125,11 @@ export default function MentorshipDashboard() {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setMeetingFilters(prev => ({
-      ...prev,
+    const updatedFilters = {
+      ...meetingFilters,
       [name]: value
-    }));
-  };
-
-  const applyMeetingFilters = () => {
-    fetchMeetings();
-  };
-
-  const resetMeetingFilters = () => {
-    setMeetingFilters({
-      dateFrom: '',
-      dateTo: '',
-      status: 'all'
-    });
-    setTimeout(() => fetchMeetings(), 100);
+    };
+    setMeetingFilters(updatedFilters);
   };
 
   const toggleSidebar = () => {
@@ -1083,7 +1366,7 @@ export default function MentorshipDashboard() {
             className={`md-nav-item ${activeTab === 'feedback-management' ? 'md-active' : ''}`}
             onClick={() => handleNavClick('feedback-management')}
           >
-            ⚙️ Feedback Management
+             Feedback Management
             <span className="md-nav-count">{allPhases.length}</span>
           </button>
         </nav>
@@ -1114,16 +1397,25 @@ export default function MentorshipDashboard() {
             {activeTab === 'mentors' && (
               <div className="md-mentors-tab">
                 <div className="md-section-header-with-filters">
-                  <h2 className="md-section-title">All Mentors ({filteredMentors.length})</h2>
-                  
-                  {isCoordinator && (
-                    <button 
-                      className="md-add-btn"
-                      onClick={() => setShowAddMentorForm(true)}
-                    >
-                      + Add Mentor
-                    </button>
-                  )}
+                  <div className="md-title-and-buttons">
+                    <h2 className="md-section-title">All Mentors ({filteredMentors.length})</h2>
+                    <div className="md-header-buttons">
+                      {isCoordinator && (
+                        <button 
+                          className="md-add-btn"
+                          onClick={() => setShowAddMentorForm(true)}
+                        >
+                          + Add Mentor
+                        </button>
+                      )}
+                      <button 
+                        className="md-download-btn"
+                        onClick={downloadMentors}
+                      >
+                        Download Details
+                      </button>
+                    </div>
+                  </div>
                   
                   <div className="md-filters-container md-glass-card">
                     <div className="md-filter-row">
@@ -1213,6 +1505,7 @@ export default function MentorshipDashboard() {
                             <th>ID</th>
                             <th>Name</th>
                             <th>Email</th>
+                            <th>Phone Number</th>
                             <th>Description</th>
                             <th>Phase</th>
                             <th>Joined</th>
@@ -1232,6 +1525,8 @@ export default function MentorshipDashboard() {
                               ? mentor.email 
                               : 'No email';
                             
+                            const displayPhone = getDisplayPhoneNumber(mentor);
+                            
                             const displayPhase = mentor.phaseId && mentor.phaseId !== 'N/A'
                               ? `Phase ${mentor.phaseId}`
                               : 'N/A';
@@ -1250,6 +1545,7 @@ export default function MentorshipDashboard() {
                                 <td className="md-id-cell">M{(mentor._id?.toString() || '').slice(-6)}</td>
                                 <td className="md-name-cell">{displayName}</td>
                                 <td className="md-email-cell">{displayEmail}</td>
+                                <td className="md-phone-cell">{displayPhone}</td>
                                 <td className="md-description-cell" title={mentor.description || ''}>
                                   {displayDescription}
                                 </td>
@@ -1267,7 +1563,7 @@ export default function MentorshipDashboard() {
                                       onClick={() => handleDeleteClick('mentor', mentor)}
                                       title="Delete Mentor"
                                     >
-                                      🗑️
+                                      Delete
                                     </button>
                                   </td>
                                 )}
@@ -1286,16 +1582,25 @@ export default function MentorshipDashboard() {
             {activeTab === 'mentees' && (
               <div className="md-mentees-tab">
                 <div className="md-section-header-with-filters">
-                  <h2 className="md-section-title">All Mentees ({filteredMentees.length})</h2>
-                  
-                  {isCoordinator && (
-                    <button 
-                      className="md-add-btn"
-                      onClick={() => setShowAddMenteeForm(true)}
-                    >
-                      + Add Mentee
-                    </button>
-                  )}
+                  <div className="md-title-and-buttons">
+                    <h2 className="md-section-title">All Mentees ({filteredMentees.length})</h2>
+                    <div className="md-header-buttons">
+                      {isCoordinator && (
+                        <button 
+                          className="md-add-btn"
+                          onClick={() => setShowAddMenteeForm(true)}
+                        >
+                          + Add Mentee
+                        </button>
+                      )}
+                      <button 
+                        className="md-download-btn"
+                        onClick={downloadMentees}
+                      >
+                         Download Details
+                      </button>
+                    </div>
+                  </div>
                   
                   <div className="md-filters-container md-glass-card">
                     <div className="md-filter-row">
@@ -1402,6 +1707,7 @@ export default function MentorshipDashboard() {
                           <tr>
                             <th>ID</th>
                             <th>Email</th>
+                            <th>Phone Number</th>
                             <th>Area of Interest</th>
                             <th>Description</th>
                             <th>Phase</th>
@@ -1413,6 +1719,7 @@ export default function MentorshipDashboard() {
                         <tbody>
                           {filteredMentees.map((mentee) => {
                             const displayEmail = mentee.email && mentee.email !== 'N/A' ? mentee.email : 'No email';
+                            const displayPhone = getDisplayPhoneNumber(mentee);
                             const displayArea = mentee.area_of_interest && mentee.area_of_interest !== 'N/A' ? mentee.area_of_interest : 'Not specified';
                             const displayDescription = mentee.description && mentee.description !== 'N/A'
                               ? mentee.description.length > 80 
@@ -1427,6 +1734,7 @@ export default function MentorshipDashboard() {
                               <tr key={mentee._id}>
                                 <td className="md-id-cell">MT{(mentee._id?.toString() || '').slice(-6)}</td>
                                 <td className="md-email-cell">{displayEmail}</td>
+                                <td className="md-phone-cell">{displayPhone}</td>
                                 <td className="md-interest-cell">{displayArea}</td>
                                 <td className="md-description-cell" title={mentee.description || ''}>{displayDescription}</td>
                                 <td><span className="md-phase-badge">{displayPhase}</span></td>
@@ -1443,7 +1751,7 @@ export default function MentorshipDashboard() {
                                       onClick={() => handleDeleteClick('mentee', mentee)}
                                       title="Delete Mentee"
                                     >
-                                      🗑️
+                                      Delete
                                     </button>
                                   </td>
                                 )}
@@ -1462,8 +1770,19 @@ export default function MentorshipDashboard() {
             {activeTab === 'assignments' && (
               <div className="md-assignments-tab">
                 <div className="md-section-header-with-filters">
-                  <h2 className="md-section-title">Mentor-Mentee Assignments ({filteredAssignments.length})</h2>
-                  
+                  <br></br>
+                  <div className="md-title-and-buttons">
+                    <h2 className="md-section-title">Mentor-Mentee Assignments ({filteredAssignments.length})</h2>
+                    <div className="md-header-buttons">
+                      <button 
+                        className="md-download-btn"
+                        onClick={downloadAssignments}
+                      >
+                        Download Details
+                      </button>
+                    </div>
+                  </div>
+                  <br></br>
                   <div className="md-filters-container md-glass-card">
                     <div className="md-filter-row">
                       <div className="md-filter-group">
@@ -1541,6 +1860,9 @@ export default function MentorshipDashboard() {
                           <div className="md-mentor-info">
                             <h4 className="md-mentor-name">{assignment.mentorDetails?.name || 'Mentor'}</h4>
                             <p className="md-email md-mentor-email">{assignment.mentorDetails?.email || 'No email'}</p>
+                            {assignment.mentorDetails?.phone_number && assignment.mentorDetails.phone_number !== 'N/A' && (
+                              <p className="md-phone md-mentor-phone">📞 {assignment.mentorDetails.phone_number}</p>
+                            )}
                           </div>
                           <div className="md-mentee-count">
                             <span className="md-count-number">{assignment.mentees?.length || 0}</span>
@@ -1557,6 +1879,9 @@ export default function MentorshipDashboard() {
                                   <div className="md-mentee-details-full">
                                     <div><strong>Name:</strong> {mentee.name || 'Mentee'}</div>
                                     <div><strong>Email:</strong> {mentee.email || 'No email'}</div>
+                                    {mentee.phone_number && mentee.phone_number !== 'N/A' && (
+                                      <div><strong>Phone:</strong> {mentee.phone_number}</div>
+                                    )}
                                     {mentee.area_of_interest && (
                                       <div><strong>Area of Interest:</strong> {mentee.area_of_interest}</div>
                                     )}
@@ -1599,14 +1924,11 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* MEETINGS TAB - IMPROVED UI */}
+            {/* MEETINGS TAB - WITH EMAIL FILTER */}
             {activeTab === 'meetings' && (
               <div className="md-meetings-tab">
                 <div className="md-meetings-header">
-                  <div className="md-meetings-title-section">
-                    <h2 className="md-section-title">Meetings Overview</h2>
-                    <p className="md-section-subtitle">Track and manage all mentorship meetings</p>
-                  </div>
+                  
                   
                   <div className="md-meeting-stats-row">
                     <div className="md-meeting-stat-card">
@@ -1623,20 +1945,8 @@ export default function MentorshipDashboard() {
                         <div className="md-stat-label">Completed</div>
                       </div>
                     </div>
-                    <div className="md-meeting-stat-card warning">
-                      <div className="md-stat-icon"></div>
-                      <div className="md-stat-info">
-                        <div className="md-stat-number">{meetingStats.scheduled}</div>
-                        <div className="md-stat-label">Scheduled</div>
-                      </div>
-                    </div>
-                    <div className="md-meeting-stat-card danger">
-                      <div className="md-stat-icon"></div>
-                      <div className="md-stat-info">
-                        <div className="md-stat-number">{meetingStats.cancelled || 0}</div>
-                        <div className="md-stat-label">Cancelled</div>
-                      </div>
-                    </div>
+                   
+                    
                   </div>
                   
                   <div className="md-meeting-filters md-glass-card">
@@ -1678,15 +1988,28 @@ export default function MentorshipDashboard() {
                         </select>
                       </div>
                       
+                      {/* ✅ NEW EMAIL FILTER */}
+                      <div className="md-filter-group">
+                        <label>Filter by Email</label>
+                        <input
+                          type="text"
+                          name="email"
+                          placeholder="Mentor or Mentee email..."
+                          value={meetingFilters.email}
+                          onChange={handleMeetingFilterChange}
+                          className="md-filter-input"
+                        />
+                      </div>
+                      
                       <div className="md-filter-actions">
-                        <button className="md-apply-btn" onClick={applyMeetingFilters}>Apply Filters</button>
+                        <button className="md-apply-btn" onClick={applyMeetingFiltersAndFetch}>Apply Filters</button>
                         <button className="md-reset-btn" onClick={resetMeetingFilters}>Reset</button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {meetings.length === 0 ? (
+                {(meetingFilters.email ? filteredMeetings : meetings).length === 0 ? (
                   <div className="md-empty-state md-glass-card">
                     <div className="md-empty-icon"></div>
                     <p>No meetings found</p>
@@ -1694,7 +2017,7 @@ export default function MentorshipDashboard() {
                   </div>
                 ) : (
                   <div className="md-meetings-list">
-                    {meetings.map((meeting) => (
+                    {(meetingFilters.email ? filteredMeetings : meetings).map((meeting) => (
                       <div key={meeting._id} className="md-meeting-item md-glass-card">
                         {/* Mentor Header */}
                         <div className="md-meeting-item-header">
@@ -1706,6 +2029,9 @@ export default function MentorshipDashboard() {
                           <div className="md-mentor-details">
                             <h3 className="md-mentor-name">{meeting.mentorDetails?.name || 'Mentor'}</h3>
                             <p className="md-mentor-email">{meeting.mentorDetails?.email || 'No email'}</p>
+                            {meeting.mentorDetails?.phone_number && meeting.mentorDetails.phone_number !== 'N/A' && (
+                              <p className="md-mentor-phone">📞 {meeting.mentorDetails.phone_number}</p>
+                            )}
                           </div>
                           <div className="md-meeting-badge">
                             <span className={`md-badge ${meeting.meeting_dates?.some(d => d.status === 'completed') ? 'completed' : 'scheduled'}`}>
@@ -1816,7 +2142,7 @@ export default function MentorshipDashboard() {
                             </div>
                             <div className="md-mentees-tags">
                               {meeting.mentees.map((mentee, idx) => (
-                                <span key={idx} className="md-mentee-tag" title={mentee.email}>
+                                <span key={idx} className="md-mentee-tag" title={`${mentee.email}${mentee.phone_number ? ` - Phone: ${mentee.phone_number}` : ''}`}>
                                   {mentee.name || mentee.email?.split('@')[0] || 'Mentee'}
                                 </span>
                               ))}
@@ -1834,7 +2160,8 @@ export default function MentorshipDashboard() {
             {activeTab === 'feedback' && (
               <div className="md-feedback-tab">
                 <div className="md-section-header-with-filters">
-                  <h2 className="md-section-title">Program Feedback ({filteredFeedbacks.length})</h2>
+                  <br></br>
+                  
                   
                   <div className="md-filters-container md-glass-card">
                     <div className="md-filter-row">
@@ -1906,6 +2233,9 @@ export default function MentorshipDashboard() {
                             <div>
                               <h4>{displayName}</h4>
                               <p>{userEmail} • {feedback.role || 'Not specified'}</p>
+                              {feedback.userDetails?.phone_number && feedback.userDetails.phone_number !== 'N/A' && (
+                                <p>📞 {feedback.userDetails.phone_number}</p>
+                              )}
                               {feedback.phaseId && <p className="md-feedback-phase">Phase {feedback.phaseId}</p>}
                             </div>
                             <span>{formatDate(feedback.createdAt)}</span>

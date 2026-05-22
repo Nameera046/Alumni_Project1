@@ -1,4 +1,4 @@
-// controllers/dashboardController.js - UPDATED TO MATCH WORKING PATTERN
+// controllers/dashboardController.js - WITH PHONE NUMBERS ADDED
 const Phase = require("../models/Phase");
 const MenteeRequest = require("../models/MenteeRequest");
 const MentorRegistration = require("../models/MentorRegistration");
@@ -7,6 +7,31 @@ const MeetingSchedule = require("../models/MeetingSchedule");
 const MeetingStatus = require("../models/MeetingStatus");
 const ProgramFeedback = require("../models/ProgramFeedback");
 const User = require("../models/User");
+
+// Helper function to extract phone number from user
+const extractPhoneNumber = (user) => {
+  if (!user) return 'N/A';
+  
+  // Check contact_details.mobile
+  if (user.contact_details) {
+    if (user.contact_details.mobile && user.contact_details.mobile !== '') 
+      return user.contact_details.mobile;
+    if (user.contact_details.phone && user.contact_details.phone !== '') 
+      return user.contact_details.phone;
+    if (user.contact_details.home && user.contact_details.home !== '') 
+      return user.contact_details.home;
+  }
+  
+  // Check basic.mobile if exists
+  if (user.basic && user.basic.mobile && user.basic.mobile !== '') 
+    return user.basic.mobile;
+  
+  // Check direct fields
+  if (user.mobile && user.mobile !== '') return user.mobile;
+  if (user.phone && user.phone !== '') return user.phone;
+  
+  return 'N/A';
+};
 
 // ==================== GET ALL MENTORS WITH FORMATTED DATA ====================
 exports.getAllMentors = async (req, res) => {
@@ -29,11 +54,12 @@ exports.getAllMentors = async (req, res) => {
           user_id: user?._id || m.mentor_id || null,
           name: user?.basic?.name || "Unknown Mentor",
           email: user?.basic?.email_id || "No email found",
+          phone_number: extractPhoneNumber(user), // ✅ ADDED PHONE NUMBER
           areas_of_interest: m.areas_of_interest || [],
           description: m.description || "",
           phaseId: m.phaseId || "N/A",
-          status: m.status || "pending",  // ✅ Added status field
-          assignedDate: m.assignedDate || null,  // ✅ Added assignedDate field
+          status: m.status || "pending",
+          assignedDate: m.assignedDate || null,
           createdAt: m.createdAt
         };
       })
@@ -52,6 +78,7 @@ exports.getAllMentors = async (req, res) => {
         total: formatted.length,
         withName: formatted.filter(m => m.name !== "Unknown Mentor").length,
         withEmail: formatted.filter(m => m.email !== "No email found").length,
+        withPhone: formatted.filter(m => m.phone_number !== 'N/A').length,
         pending: formatted.filter(m => m.status === 'pending').length,
         assigned: formatted.filter(m => m.status === 'assigned').length
       }
@@ -87,6 +114,7 @@ exports.getAllMentees = async (req, res) => {
           user_id: user?._id || m.mentee_user_id,
           name: user?.basic?.name || "Unknown Mentee",
           email: user?.basic?.email_id || "No email found",
+          phone_number: extractPhoneNumber(user), // ✅ ADDED PHONE NUMBER
           area_of_interest: m.area_of_interest || "Not specified",
           description: m.description || "",
           phaseId: m.phaseId || "N/A",
@@ -103,6 +131,7 @@ exports.getAllMentees = async (req, res) => {
       mentees: formatted,
       stats: {
         total: formatted.length,
+        withPhone: formatted.filter(m => m.phone_number !== 'N/A').length,
         pending: formatted.filter(m => m.status === "pending").length,
         assigned: formatted.filter(m => m.assigned).length,
         unassigned: formatted.filter(m => !m.assigned).length
@@ -135,7 +164,8 @@ exports.getAllAssignments = async (req, res) => {
             return {
               _id: menteeId,
               name: mentee?.basic?.name || "Unknown Mentee",
-              email: mentee?.basic?.email_id || "No email"
+              email: mentee?.basic?.email_id || "No email",
+              phone_number: extractPhoneNumber(mentee) // ✅ ADDED PHONE NUMBER FOR EACH MENTEE
             };
           })
         );
@@ -145,7 +175,8 @@ exports.getAllAssignments = async (req, res) => {
           mentor_user_id: assignment.mentor_user_id,
           mentorDetails: {
             name: mentor?.basic?.name || "Unknown Mentor",
-            email: mentor?.basic?.email_id || "No email"
+            email: mentor?.basic?.email_id || "No email",
+            phone_number: extractPhoneNumber(mentor) // ✅ ADDED MENTOR PHONE NUMBER
           },
           mentees: mentees,
           commencement_date: assignment.commencement_date,
@@ -173,6 +204,7 @@ exports.getAllAssignments = async (req, res) => {
   }
 };
 
+// ==================== GET ALL MEETINGS ====================
 exports.getAllMeetings = async (req, res) => {
   try {
     console.log("🔍 Fetching all meetings...");
@@ -201,7 +233,8 @@ exports.getAllMeetings = async (req, res) => {
             return {
               _id: menteeId,
               name: mentee?.basic?.name || "Unknown Mentee",
-              email: mentee?.basic?.email_id || "No email"
+              email: mentee?.basic?.email_id || "No email",
+              phone_number: extractPhoneNumber(mentee) // ✅ ADDED MENTEE PHONE NUMBER
             };
           })
         );
@@ -230,7 +263,8 @@ exports.getAllMeetings = async (req, res) => {
           mentor_user_id: meeting.mentor_user_id,
           mentorDetails: {
             name: mentor?.basic?.name || "Unknown Mentor",
-            email: mentor?.basic?.email_id || "No email"
+            email: mentor?.basic?.email_id || "No email",
+            phone_number: extractPhoneNumber(mentor) // ✅ ADDED MENTOR PHONE NUMBER
           },
           mentees,
           meeting_dates: meeting.meeting_dates || [],
@@ -286,7 +320,6 @@ exports.getAllMeetings = async (req, res) => {
   }
 };
 
-
 // ==================== GET ALL FEEDBACKS WITH FORMATTED DATA ====================
 exports.getAllFeedbacks = async (req, res) => {
   try {
@@ -304,7 +337,8 @@ exports.getAllFeedbacks = async (req, res) => {
           user_id: feedback.user_id,
           userDetails: {
             name: user?.basic?.name || "Anonymous User",
-            email: user?.basic?.email_id || "No email"
+            email: user?.basic?.email_id || "No email",
+            phone_number: extractPhoneNumber(user) // ✅ ADDED PHONE NUMBER FOR FEEDBACK USER
           },
           role: feedback.role,
           programOrganization: feedback.programOrganization,
@@ -454,13 +488,16 @@ exports.debugUserData = async (req, res) => {
           hasBasic: !!user.basic,
           basicFields: user.basic ? Object.keys(user.basic) : [],
           name: user.basic?.name,
-          email: user.basic?.email_id
+          email: user.basic?.email_id,
+          phoneFromContactDetails: user.contact_details?.mobile,
+          phoneFromBasic: user.basic?.mobile
         } : null,
         mentorRegistration: mentorReg,
         sampleUsers: allUsers.map(u => ({
           _id: u._id,
           name: u.basic?.name,
-          email: u.basic?.email_id
+          email: u.basic?.email_id,
+          phone: u.contact_details?.mobile || u.basic?.mobile
         }))
       }
     });
@@ -470,8 +507,6 @@ exports.debugUserData = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
-
-// controllers/dashboardController.js - ADD THESE NEW FUNCTIONS AT THE END
 
 // ==================== DASHBOARD SUMMARY (For Cards Display) ====================
 exports.getDashboardSummary = async (req, res) => {
@@ -517,9 +552,6 @@ exports.getDashboardSummary = async (req, res) => {
               if (statusDoc.status === 'Postponed' || statusDoc.status === 'Cancelled') postponedMeetings++;
             }
           }
-          
-          // Check if meeting is upcoming
-         
         }
       }
     }
@@ -678,8 +710,6 @@ function getRandomColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// ==================== GET PHASE-WISE STATISTICS ====================
-// ==================== GET PHASE-WISE STATISTICS (FIXED & FINAL) ====================
 // ==================== GET PHASE-WISE STATISTICS (FINAL FIX) ====================
 exports.getPhaseStatistics = async (req, res) => {
   try {
@@ -805,14 +835,6 @@ exports.getPhaseStatistics = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
 // ==================== GET MENTOR INTERESTS CAROUSEL ====================
 exports.getMentorInterestsCarousel = async (req, res) => {
   try {
@@ -888,6 +910,7 @@ exports.getUpcomingMeetings = async (req, res) => {
         return {
           _id: meeting._id,
           mentorName: mentor?.basic?.name || "Unknown Mentor",
+          mentorPhone: extractPhoneNumber(mentor), // ✅ ADDED MENTOR PHONE NUMBER
           menteeCount: meeting.mentee_user_ids.length,
           nextMeeting: upcomingDates.length > 0 ? upcomingDates[0].date : null,
           allUpcomingDates: upcomingDates.map(d => d.date),
