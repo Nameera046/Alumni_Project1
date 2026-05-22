@@ -980,7 +980,7 @@
 
 .modal-cancel-btn {
   background: #f3f4f6;
-  color: #374151;
+  color: #101010;
 }
 
 .modal-cancel-btn:hover {
@@ -999,7 +999,7 @@
 
 .modal-delete-btn {
   background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: rgb(225, 74, 74);
+  color: rgb(11, 11, 11);
 }
 
 .modal-delete-btn:hover {
@@ -1022,7 +1022,7 @@
   border-left: 3px solid #f59e0b;
   border-radius: 6px;
   font-size: 13px;
-  color: #92400e;
+  color: #161515;
 }
 
 /* Update phase card header to accommodate buttons */

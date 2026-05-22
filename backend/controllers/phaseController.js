@@ -1,11 +1,18 @@
 // controllers/phaseController.js
 const Phase = require("../models/Phase");
-const Mentee = require("../models/MenteeRequest");   // Assuming your mentee model
-const Mentor = require("../models/MentorRegistration");   // Assuming your mentor model
+const Mentee = require("../models/MenteeRequest");
+const Mentor = require("../models/MentorRegistration");
 const MentorMenteeAssignment = require("../models/MentorMenteeAssignment");
 const MeetingSchedule = require("../models/MeetingSchedule");
 const MeetingStatus = require("../models/MeetingStatus");
 const ProgramFeedback = require("../models/ProgramFeedback");
+
+// Helper function to safely parse phaseId
+const safeParsePhaseId = (phaseId) => {
+  if (!phaseId) return null;
+  const parsed = parseInt(phaseId);
+  return isNaN(parsed) ? null : parsed;
+};
 
 // Get all phases
 exports.getPhases = async (req, res) => {
@@ -18,10 +25,15 @@ exports.getPhases = async (req, res) => {
   }
 };
 
-// ✅ Get mentor count by phaseId
+// Get mentor count by phaseId
 exports.getMentorCount = async (req, res) => {
   try {
-    const phaseId = Number(req.query.phaseId);
+    const phaseId = safeParsePhaseId(req.query.phaseId);
+    
+    if (phaseId === null) {
+      return res.status(400).json({ success: false, message: "Valid phaseId is required" });
+    }
+    
     const count = await Mentor.countDocuments({ phaseId });
     res.json({ success: true, count });
   } catch (err) {
@@ -30,10 +42,15 @@ exports.getMentorCount = async (req, res) => {
   }
 };
 
-// ✅ Get mentee count by phaseId
+// Get mentee count by phaseId
 exports.getMenteeCount = async (req, res) => {
   try {
-    const phaseId = Number(req.query.phaseId);
+    const phaseId = safeParsePhaseId(req.query.phaseId);
+    
+    if (phaseId === null) {
+      return res.status(400).json({ success: false, message: "Valid phaseId is required" });
+    }
+    
     const count = await Mentee.countDocuments({ phaseId });
     res.json({ success: true, count });
   } catch (err) {
@@ -82,18 +99,24 @@ exports.createPhase = async (req, res) => {
   }
 };
 
-// ✅ UPDATE PHASE (EDIT)
+// UPDATE PHASE (EDIT)
 exports.updatePhase = async (req, res) => {
   try {
     const { phaseId } = req.params;
     const { name, startDate, endDate } = req.body;
+
+    // Validate phaseId
+    const phaseIdNum = safeParsePhaseId(phaseId);
+    if (phaseIdNum === null) {
+      return res.status(400).json({ success: false, message: "Valid phaseId is required" });
+    }
 
     if (!name || !startDate || !endDate) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
     // Find the phase to update
-    const phase = await Phase.findOne({ phaseId: parseInt(phaseId) });
+    const phase = await Phase.findOne({ phaseId: phaseIdNum });
     
     if (!phase) {
       return res.status(404).json({ success: false, message: "Phase not found" });
@@ -101,7 +124,7 @@ exports.updatePhase = async (req, res) => {
 
     // Check for overlapping dates with OTHER phases (excluding current phase)
     const overlapping = await Phase.findOne({
-      phaseId: { $ne: parseInt(phaseId) },
+      phaseId: { $ne: phaseIdNum },
       $or: [
         { startDate: { $lte: new Date(endDate) }, endDate: { $gte: new Date(startDate) } }
       ]
@@ -134,11 +157,15 @@ exports.updatePhase = async (req, res) => {
   }
 };
 
-// ✅ DELETE PHASE
+// DELETE PHASE
 exports.deletePhase = async (req, res) => {
   try {
     const { phaseId } = req.params;
-    const phaseIdNum = parseInt(phaseId);
+    const phaseIdNum = safeParsePhaseId(phaseId);
+    
+    if (phaseIdNum === null) {
+      return res.status(400).json({ success: false, message: "Valid phaseId is required" });
+    }
 
     // Find the phase
     const phase = await Phase.findOne({ phaseId: phaseIdNum });
@@ -205,11 +232,17 @@ exports.deletePhase = async (req, res) => {
   }
 };
 
-// ✅ GET SINGLE PHASE BY ID (Optional - for edit form)
+// GET SINGLE PHASE BY ID
 exports.getPhaseById = async (req, res) => {
   try {
     const { phaseId } = req.params;
-    const phase = await Phase.findOne({ phaseId: parseInt(phaseId) });
+    const phaseIdNum = safeParsePhaseId(phaseId);
+    
+    if (phaseIdNum === null) {
+      return res.status(400).json({ success: false, message: "Valid phaseId is required" });
+    }
+    
+    const phase = await Phase.findOne({ phaseId: phaseIdNum });
     
     if (!phase) {
       return res.status(404).json({ success: false, message: "Phase not found" });

@@ -1,4 +1,4 @@
-// controllers/dashboardController.js - WITH PHONE NUMBERS ADDED
+// controllers/dashboardController.js - WITH PHONE NUMBERS ADDED & FIXED ASSIGNMENTS & PHASE ID FROM MENTOR
 const Phase = require("../models/Phase");
 const MenteeRequest = require("../models/MenteeRequest");
 const MentorRegistration = require("../models/MentorRegistration");
@@ -54,7 +54,7 @@ exports.getAllMentors = async (req, res) => {
           user_id: user?._id || m.mentor_id || null,
           name: user?.basic?.name || "Unknown Mentor",
           email: user?.basic?.email_id || "No email found",
-          phone_number: extractPhoneNumber(user), // ✅ ADDED PHONE NUMBER
+          phone_number: extractPhoneNumber(user),
           areas_of_interest: m.areas_of_interest || [],
           description: m.description || "",
           phaseId: m.phaseId || "N/A",
@@ -114,7 +114,7 @@ exports.getAllMentees = async (req, res) => {
           user_id: user?._id || m.mentee_user_id,
           name: user?.basic?.name || "Unknown Mentee",
           email: user?.basic?.email_id || "No email found",
-          phone_number: extractPhoneNumber(user), // ✅ ADDED PHONE NUMBER
+          phone_number: extractPhoneNumber(user),
           area_of_interest: m.area_of_interest || "Not specified",
           description: m.description || "",
           phaseId: m.phaseId || "N/A",
@@ -144,7 +144,7 @@ exports.getAllMentees = async (req, res) => {
   }
 };
 
-// ==================== GET ALL ASSIGNMENTS WITH FORMATTED DATA ====================
+// ==================== GET ALL ASSIGNMENTS WITH FORMATTED DATA (FIXED - PHASE FROM MENTOR) ====================
 exports.getAllAssignments = async (req, res) => {
   try {
     console.log("🔍 Fetching all assignments...");
@@ -154,18 +154,57 @@ exports.getAllAssignments = async (req, res) => {
 
     const formatted = await Promise.all(
       assignments.map(async (assignment) => {
-        // Get mentor details
+        // Get mentor details with phone number
         const mentor = await User.findById(assignment.mentor_user_id);
         
-        // Get all mentees details
+        // Get mentor registration to fetch phaseId
+        const mentorRegistration = await MentorRegistration.findOne({ 
+          mentor_id: assignment.mentor_user_id 
+        });
+        
+        // Get mentor phone number
+        let mentorPhone = 'N/A';
+        if (mentor) {
+          if (mentor.contact_details?.mobile) {
+            mentorPhone = mentor.contact_details.mobile;
+          } else if (mentor.contact_details?.phone) {
+            mentorPhone = mentor.contact_details.phone;
+          } else if (mentor.basic?.mobile) {
+            mentorPhone = mentor.basic.mobile;
+          }
+        }
+        
+        // Get phaseId from mentor registration (NOT from assignment)
+        const phaseId = mentorRegistration?.phaseId || assignment.phaseId || 'N/A';
+        
+        // Get all mentees details with phone numbers and additional info
         const mentees = await Promise.all(
           assignment.mentee_user_ids.map(async (menteeId) => {
             const mentee = await User.findById(menteeId);
+            
+            // Get mentee phone number
+            let menteePhone = 'N/A';
+            if (mentee) {
+              if (mentee.contact_details?.mobile) {
+                menteePhone = mentee.contact_details.mobile;
+              } else if (mentee.contact_details?.phone) {
+                menteePhone = mentee.contact_details.phone;
+              } else if (mentee.basic?.mobile) {
+                menteePhone = mentee.basic.mobile;
+              }
+            }
+            
+            // Get mentee request details for additional info
+            const menteeRequest = await MenteeRequest.findOne({ mentee_user_id: menteeId });
+            
             return {
               _id: menteeId,
               name: mentee?.basic?.name || "Unknown Mentee",
               email: mentee?.basic?.email_id || "No email",
-              phone_number: extractPhoneNumber(mentee) // ✅ ADDED PHONE NUMBER FOR EACH MENTEE
+              phone_number: menteePhone,
+              area_of_interest: menteeRequest?.area_of_interest || "Not specified",
+              description: menteeRequest?.description || "",
+              phaseId: menteeRequest?.phaseId || phaseId
             };
           })
         );
@@ -176,25 +215,31 @@ exports.getAllAssignments = async (req, res) => {
           mentorDetails: {
             name: mentor?.basic?.name || "Unknown Mentor",
             email: mentor?.basic?.email_id || "No email",
-            phone_number: extractPhoneNumber(mentor) // ✅ ADDED MENTOR PHONE NUMBER
+            phone_number: mentorPhone
           },
           mentees: mentees,
           commencement_date: assignment.commencement_date,
           end_date: assignment.end_date,
-          phaseId: assignment.phaseId,
+          phaseId: phaseId,  // ✅ Now fetches from mentor registration
           createdAt: assignment.createdAt
         };
       })
     );
 
     console.log(`✅ Final assignments sent to frontend: ${formatted.length}`);
+    console.log(`📊 Assignment phase details:`, formatted.map(a => ({
+      mentor: a.mentorDetails.name,
+      phaseId: a.phaseId,
+      menteesCount: a.mentees.length
+    })));
+    
     res.json({ 
       success: true, 
       assignments: formatted,
       stats: {
         total: formatted.length,
         totalMentees: formatted.reduce((sum, a) => sum + a.mentees.length, 0),
-        avgMenteesPerMentor: (formatted.reduce((sum, a) => sum + a.mentees.length, 0) / formatted.length).toFixed(1)
+        avgMenteesPerMentor: formatted.length > 0 ? (formatted.reduce((sum, a) => sum + a.mentees.length, 0) / formatted.length).toFixed(1) : 0
       }
     });
 
@@ -234,7 +279,7 @@ exports.getAllMeetings = async (req, res) => {
               _id: menteeId,
               name: mentee?.basic?.name || "Unknown Mentee",
               email: mentee?.basic?.email_id || "No email",
-              phone_number: extractPhoneNumber(mentee) // ✅ ADDED MENTEE PHONE NUMBER
+              phone_number: extractPhoneNumber(mentee)
             };
           })
         );
@@ -264,7 +309,7 @@ exports.getAllMeetings = async (req, res) => {
           mentorDetails: {
             name: mentor?.basic?.name || "Unknown Mentor",
             email: mentor?.basic?.email_id || "No email",
-            phone_number: extractPhoneNumber(mentor) // ✅ ADDED MENTOR PHONE NUMBER
+            phone_number: extractPhoneNumber(mentor)
           },
           mentees,
           meeting_dates: meeting.meeting_dates || [],
@@ -338,7 +383,7 @@ exports.getAllFeedbacks = async (req, res) => {
           userDetails: {
             name: user?.basic?.name || "Anonymous User",
             email: user?.basic?.email_id || "No email",
-            phone_number: extractPhoneNumber(user) // ✅ ADDED PHONE NUMBER FOR FEEDBACK USER
+            phone_number: extractPhoneNumber(user)
           },
           role: feedback.role,
           programOrganization: feedback.programOrganization,
@@ -868,10 +913,10 @@ exports.getMentorInterestsCarousel = async (req, res) => {
       .map(([interest, count]) => ({
         interest,
         count,
-        mentors: mentorsByInterest[interest].slice(0, 5), // Top 5 mentors per interest
+        mentors: mentorsByInterest[interest].slice(0, 5),
         color: getRandomColor()
       }))
-      .sort((a, b) => b.count - a.count); // Sort by count descending
+      .sort((a, b) => b.count - a.count);
     
     res.json({
       success: true,
@@ -905,12 +950,12 @@ exports.getUpcomingMeetings = async (req, res) => {
         const upcomingDates = meeting.meeting_dates
           .filter(dateObj => dateObj.date && new Date(dateObj.date) >= today)
           .sort((a, b) => new Date(a.date) - new Date(b.date))
-          .slice(0, 3); // Get next 3 upcoming dates
+          .slice(0, 3);
         
         return {
           _id: meeting._id,
           mentorName: mentor?.basic?.name || "Unknown Mentor",
-          mentorPhone: extractPhoneNumber(mentor), // ✅ ADDED MENTOR PHONE NUMBER
+          mentorPhone: extractPhoneNumber(mentor),
           menteeCount: meeting.mentee_user_ids.length,
           nextMeeting: upcomingDates.length > 0 ? upcomingDates[0].date : null,
           allUpcomingDates: upcomingDates.map(d => d.date),

@@ -35,7 +35,7 @@ export default function MentorshipDashboard() {
     dateFrom: '',
     dateTo: '',
     status: 'all',
-    email: ''  // ✅ ADDED EMAIL FILTER
+    email: ''
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -112,7 +112,6 @@ export default function MentorshipDashboard() {
   const extractPhoneNumber = (user) => {
     if (!user) return 'N/A';
     
-    // Check contact_details.mobile (from your data structure)
     if (user.contact_details) {
       if (user.contact_details.mobile && user.contact_details.mobile !== '') 
         return user.contact_details.mobile;
@@ -122,14 +121,12 @@ export default function MentorshipDashboard() {
         return user.contact_details.home;
     }
     
-    // Check direct fields
     if (user.mobile && user.mobile !== '') return user.mobile;
     if (user.phone && user.phone !== '') return user.phone;
     if (user.phoneNumber && user.phoneNumber !== '') return user.phoneNumber;
     if (user.contactNo && user.contactNo !== '') return user.contactNo;
     if (user.contactNumber && user.contactNumber !== '') return user.contactNumber;
     
-    // Check for phone in nested objects
     if (user.profile && user.profile.contact_details) {
       if (user.profile.contact_details.mobile && user.profile.contact_details.mobile !== '') 
         return user.profile.contact_details.mobile;
@@ -137,7 +134,6 @@ export default function MentorshipDashboard() {
         return user.profile.contact_details.phone;
     }
     
-    // Check if the user object has a phone field with any variation
     const phoneFields = ['phone_number', 'contact_no', 'contactnumber', 'phonenumber', 'cell', 'cellphone'];
     for (const field of phoneFields) {
       if (user[field] && user[field] !== '') return user[field];
@@ -161,7 +157,6 @@ export default function MentorshipDashboard() {
   const applyMeetingFilters = () => {
     let filtered = [...meetings];
     
-    // Filter by date range
     if (meetingFilters.dateFrom) {
       const fromDate = new Date(meetingFilters.dateFrom);
       filtered = filtered.filter(meeting => {
@@ -178,22 +173,18 @@ export default function MentorshipDashboard() {
       });
     }
     
-    // Filter by status
     if (meetingFilters.status !== 'all') {
       filtered = filtered.filter(meeting => 
         meeting.status?.toLowerCase() === meetingFilters.status.toLowerCase()
       );
     }
     
-    // ✅ FILTER BY EMAIL (mentor email or mentee email)
     if (meetingFilters.email && meetingFilters.email.trim() !== '') {
       const searchEmail = meetingFilters.email.toLowerCase().trim();
       filtered = filtered.filter(meeting => {
-        // Check mentor email
         const mentorEmail = meeting.mentorDetails?.email?.toLowerCase() || '';
         if (mentorEmail.includes(searchEmail)) return true;
         
-        // Check any mentee email
         if (meeting.mentees && meeting.mentees.length > 0) {
           return meeting.mentees.some(mentee => 
             mentee.email?.toLowerCase().includes(searchEmail)
@@ -238,7 +229,6 @@ export default function MentorshipDashboard() {
     };
     setMeetingFilters(updatedFilters);
     
-    // If email filter is being cleared or changed, apply filters immediately
     if (name === 'email') {
       setTimeout(() => applyMeetingFilters(), 0);
     }
@@ -246,10 +236,8 @@ export default function MentorshipDashboard() {
 
   const applyMeetingFiltersAndFetch = () => {
     if (meetingFilters.email && meetingFilters.email.trim() !== '') {
-      // Apply client-side filter
       applyMeetingFilters();
     } else {
-      // Fetch from server if no email filter
       fetchMeetings();
     }
   };
@@ -259,7 +247,7 @@ export default function MentorshipDashboard() {
       dateFrom: '',
       dateTo: '',
       status: 'all',
-      email: ''  // ✅ RESET EMAIL FILTER
+      email: ''
     });
     setTimeout(() => fetchMeetings(), 100);
   };
@@ -271,24 +259,18 @@ export default function MentorshipDashboard() {
       return;
     }
 
-    // Create CSV rows
     const csvRows = [];
-    
-    // Add headers
     csvRows.push(headers.join(','));
     
-    // Add data rows
     for (const row of data) {
       const values = headers.map(header => {
         const value = row[header.toLowerCase().replace(/\s/g, '_')] || '';
-        // Escape quotes and wrap in quotes if contains comma
         const escaped = String(value).replace(/"/g, '""');
         return escaped.includes(',') ? `"${escaped}"` : escaped;
       });
       csvRows.push(values.join(','));
     }
     
-    // Create blob and download
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -350,7 +332,7 @@ export default function MentorshipDashboard() {
     downloadCSV(formattedData, 'mentees_details', headers);
   };
 
-  // Download Assignments (Mentor-Mentee Assignments) with Phone Numbers
+  // Download Assignments - With separate columns for each mentee
   const downloadAssignments = () => {
     const dataToDownload = filteredAssignments.length > 0 ? filteredAssignments : assignments;
     
@@ -359,30 +341,48 @@ export default function MentorshipDashboard() {
       return;
     }
 
-    const headers = ['Mentor Name', 'Mentor Email', 'Mentor Phone', 'Mentees Count', 'Mentees List (with Phone)', 'Phase', 'Assignment Date', 'Assignment ID'];
+    let maxMentees = 0;
+    dataToDownload.forEach(assignment => {
+      if (assignment.mentees && assignment.mentees.length > maxMentees) {
+        maxMentees = assignment.mentees.length;
+      }
+    });
+    
+    const headers = ['Mentor Name', 'Mentor Email', 'Mentor Phone', 'Phase', 'Assignment Date', 'Assignment ID'];
+    
+    for (let i = 1; i <= maxMentees; i++) {
+      headers.push(`Mentee ${i} Name`);
+      headers.push(`Mentee ${i} Email`);
+    }
     
     const formattedData = dataToDownload.map(assignment => {
-      // Get mentor phone
-      const mentorPhone = getDisplayPhoneNumber(assignment.mentorDetails);
+      const mentorName = assignment.mentorDetails?.name || 'N/A';
+      const mentorEmail = assignment.mentorDetails?.email || 'N/A';
+      const mentorPhone = assignment.mentorDetails?.phone_number || assignment.mentorDetails?.phoneNumber || 'N/A';
+      const phaseValue = assignment.phaseId ? `Phase ${assignment.phaseId}` : 'N/A';
       
-      // Create mentees list with phone numbers
-      const menteesList = assignment.mentees && assignment.mentees.length > 0
-        ? assignment.mentees.map(m => {
-            const menteePhone = getDisplayPhoneNumber(m);
-            return `${m.name || 'Mentee'} (${m.email || m.email_id || 'No email'}) - Phone: ${menteePhone}`;
-          }).join('; ')
-        : 'No mentees assigned';
-      
-      return {
-        mentor_name: assignment.mentorDetails?.name || getNameFromEmail(assignment.mentorDetails?.email || assignment.mentorDetails?.email_id) || 'N/A',
-        mentor_email: assignment.mentorDetails?.email || assignment.mentorDetails?.email_id || 'N/A',
+      const row = {
+        mentor_name: mentorName,
+        mentor_email: mentorEmail,
         mentor_phone: mentorPhone,
-        mentees_count: assignment.mentees?.length || 0,
-        mentees_list: menteesList,
-        phase: assignment.phaseId ? `Phase ${assignment.phaseId}` : (assignment.mentorDetails?.phaseId ? `Phase ${assignment.mentorDetails.phaseId}` : 'N/A'),
+        phase: phaseValue,
         assignment_date: formatDate(assignment.createdAt),
         assignment_id: assignment._id?.toString().slice(-8) || 'N/A'
       };
+      
+      if (assignment.mentees && assignment.mentees.length > 0) {
+        assignment.mentees.forEach((mentee, index) => {
+          row[`mentee_${index + 1}_name`] = mentee.name || 'Unknown Mentee';
+          row[`mentee_${index + 1}_email`] = mentee.email || 'No email';
+        });
+      }
+      
+      for (let i = (assignment.mentees?.length || 0) + 1; i <= maxMentees; i++) {
+        row[`mentee_${i}_name`] = '';
+        row[`mentee_${i}_email`] = '';
+      }
+      
+      return row;
     });
     
     downloadCSV(formattedData, 'mentor_mentee_assignments', headers);
@@ -401,6 +401,7 @@ export default function MentorshipDashboard() {
     
     const formattedData = dataToDownload.map(meeting => {
       const meetingDate = meeting.meeting_dates?.[0]?.date || 'N/A';
+      const meetingTime = meeting.meeting_dates?.[0]?.meeting_time || 'N/A';
       const mentorPhone = getDisplayPhoneNumber(meeting.mentorDetails);
       const menteesList = meeting.mentees && meeting.mentees.length > 0
         ? meeting.mentees.map(m => `${m.name || 'Mentee'} (${m.email || 'No email'})`).join('; ')
@@ -411,7 +412,7 @@ export default function MentorshipDashboard() {
         mentor_email: meeting.mentorDetails?.email || 'N/A',
         mentor_phone: mentorPhone,
         meeting_date: formatDate(meetingDate),
-        meeting_time: meeting.meeting_time || 'N/A',
+        meeting_time: meetingTime,
         status: meeting.status || 'N/A',
         platform: meeting.platform || 'N/A',
         agenda: meeting.agenda || 'N/A',
@@ -753,8 +754,12 @@ export default function MentorshipDashboard() {
       const res = await axios.get(`${API_BASE_URL}/api/dashboard/assignments`);
       if (res.data && res.data.success) {
         const assignmentsData = res.data.assignments || [];
-        setAssignments(assignmentsData);
-        applyAssignmentFilters(assignmentsData, assignmentFilters);
+        const assignmentsWithMentees = assignmentsData.map(assignment => ({
+          ...assignment,
+          mentees: assignment.mentees || []
+        }));
+        setAssignments(assignmentsWithMentees);
+        applyAssignmentFilters(assignmentsWithMentees, assignmentFilters);
       }
     } catch (err) {
       console.error("Error fetching assignments:", err);
@@ -1168,7 +1173,7 @@ export default function MentorshipDashboard() {
         year: 'numeric'
       });
       
-      if (timeString) {
+      if (timeString && timeString !== 'N/A') {
         return `${dateStr} at ${formatTime(timeString)}`;
       }
       return dateStr;
@@ -1178,7 +1183,7 @@ export default function MentorshipDashboard() {
   };
 
   const formatTime = (timeString) => {
-    if (!timeString) return '';
+    if (!timeString || timeString === 'N/A') return 'Time not set';
     if (timeString.includes(':')) {
       const [hours, minutes] = timeString.split(':');
       const hour = parseInt(hours);
@@ -1412,7 +1417,7 @@ export default function MentorshipDashboard() {
                         className="md-download-btn"
                         onClick={downloadMentors}
                       >
-                        Download Details
+                         Download Details
                       </button>
                     </div>
                   </div>
@@ -1526,17 +1531,14 @@ export default function MentorshipDashboard() {
                               : 'No email';
                             
                             const displayPhone = getDisplayPhoneNumber(mentor);
-                            
                             const displayPhase = mentor.phaseId && mentor.phaseId !== 'N/A'
                               ? `Phase ${mentor.phaseId}`
                               : 'N/A';
-                            
                             const displayDescription = mentor.description && mentor.description !== 'N/A' && mentor.description !== 'No description'
                               ? mentor.description.length > 100 
                                 ? mentor.description.substring(0, 100) + '...' 
                                 : mentor.description
                               : '—';
-                            
                             const displayStatus = mentor.status || 'pending';
                             const statusClass = getStatusClass(displayStatus);
 
@@ -1578,7 +1580,7 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* MENTEES TAB */}
+            {/* MENTEES TAB - FIXED TABLE STRUCTURE */}
             {activeTab === 'mentees' && (
               <div className="md-mentees-tab">
                 <div className="md-section-header-with-filters">
@@ -1597,7 +1599,7 @@ export default function MentorshipDashboard() {
                         className="md-download-btn"
                         onClick={downloadMentees}
                       >
-                         Download Details
+                        Download Details
                       </button>
                     </div>
                   </div>
@@ -1770,7 +1772,6 @@ export default function MentorshipDashboard() {
             {activeTab === 'assignments' && (
               <div className="md-assignments-tab">
                 <div className="md-section-header-with-filters">
-                  <br></br>
                   <div className="md-title-and-buttons">
                     <h2 className="md-section-title">Mentor-Mentee Assignments ({filteredAssignments.length})</h2>
                     <div className="md-header-buttons">
@@ -1778,11 +1779,11 @@ export default function MentorshipDashboard() {
                         className="md-download-btn"
                         onClick={downloadAssignments}
                       >
-                        Download Details
+                         Download Details
                       </button>
                     </div>
                   </div>
-                  <br></br>
+                  
                   <div className="md-filters-container md-glass-card">
                     <div className="md-filter-row">
                       <div className="md-filter-group">
@@ -1912,7 +1913,7 @@ export default function MentorshipDashboard() {
                                 onClick={() => handleDeleteClick('assignment', assignment)}
                                 title="Delete Assignment"
                               >
-                                🗑️ Delete
+                                 Delete
                               </button>
                             )}
                           </div>
@@ -1924,11 +1925,21 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* MEETINGS TAB - WITH EMAIL FILTER */}
+            {/* MEETINGS TAB */}
             {activeTab === 'meetings' && (
               <div className="md-meetings-tab">
                 <div className="md-meetings-header">
-                  
+                  <div className="md-title-and-buttons" style={{ marginBottom: '20px' }}>
+                    <h2 className="md-section-title">Meetings Overview</h2>
+                    <div className="md-header-buttons">
+                      <button 
+                        className="md-download-btn"
+                        onClick={downloadMeetings}
+                      >
+                        Download Details
+                      </button>
+                    </div>
+                  </div>
                   
                   <div className="md-meeting-stats-row">
                     <div className="md-meeting-stat-card">
@@ -1945,8 +1956,6 @@ export default function MentorshipDashboard() {
                         <div className="md-stat-label">Completed</div>
                       </div>
                     </div>
-                   
-                    
                   </div>
                   
                   <div className="md-meeting-filters md-glass-card">
@@ -1988,7 +1997,6 @@ export default function MentorshipDashboard() {
                         </select>
                       </div>
                       
-                      {/* ✅ NEW EMAIL FILTER */}
                       <div className="md-filter-group">
                         <label>Filter by Email</label>
                         <input
@@ -2017,140 +2025,142 @@ export default function MentorshipDashboard() {
                   </div>
                 ) : (
                   <div className="md-meetings-list">
-                    {(meetingFilters.email ? filteredMeetings : meetings).map((meeting) => (
-                      <div key={meeting._id} className="md-meeting-item md-glass-card">
-                        {/* Mentor Header */}
-                        <div className="md-meeting-item-header">
-                          <div className="md-mentor-avatar">
-                            <span className="md-avatar-text">
-                              {meeting.mentorDetails?.name?.charAt(0) || 'M'}
-                            </span>
+                    {(meetingFilters.email ? filteredMeetings : meetings).map((meeting) => {
+                      const firstMeetingDate = meeting.meeting_dates?.[0];
+                      const meetingTime = firstMeetingDate?.meeting_time || 'Time not set';
+                      const duration = firstMeetingDate?.duration_minutes || meeting.duration_minutes || 30;
+                      const formattedTime = formatTime(meetingTime);
+                      
+                      return (
+                        <div key={meeting._id} className="md-meeting-item md-glass-card">
+                          <div className="md-meeting-item-header">
+                            <div className="md-mentor-avatar">
+                              <span className="md-avatar-text">
+                                {meeting.mentorDetails?.name?.charAt(0) || 'M'}
+                              </span>
+                            </div>
+                            <div className="md-mentor-details">
+                              <h3 className="md-mentor-name">{meeting.mentorDetails?.name || 'Mentor'}</h3>
+                              <p className="md-mentor-email">{meeting.mentorDetails?.email || 'No email'}</p>
+                              {meeting.mentorDetails?.phone_number && meeting.mentorDetails.phone_number !== 'N/A' && (
+                                <p className="md-mentor-phone">Phone: {meeting.mentorDetails.phone_number}</p>
+                              )}
+                            </div>
+                            <div className="md-meeting-badge">
+                              <span className={`md-badge ${meeting.meeting_dates?.some(d => d.status === 'completed') ? 'completed' : 'scheduled'}`}>
+                                {meeting.meeting_dates?.some(d => d.status === 'completed') ? 'In Progress' : 'Active'}
+                              </span>
+                            </div>
                           </div>
-                          <div className="md-mentor-details">
-                            <h3 className="md-mentor-name">{meeting.mentorDetails?.name || 'Mentor'}</h3>
-                            <p className="md-mentor-email">{meeting.mentorDetails?.email || 'No email'}</p>
-                            {meeting.mentorDetails?.phone_number && meeting.mentorDetails.phone_number !== 'N/A' && (
-                              <p className="md-mentor-phone">📞 {meeting.mentorDetails.phone_number}</p>
-                            )}
-                          </div>
-                          <div className="md-meeting-badge">
-                            <span className={`md-badge ${meeting.meeting_dates?.some(d => d.status === 'completed') ? 'completed' : 'scheduled'}`}>
-                              {meeting.meeting_dates?.some(d => d.status === 'completed') ? 'In Progress' : 'Active'}
-                            </span>
-                          </div>
-                        </div>
 
-                        {/* Meeting Info */}
-                        <div className="md-meeting-info-grid">
-                          <div className="md-info-item">
-                            <span className="md-info-icon"></span>
-                            <div className="md-info-content">
-                              <label>Time</label>
-                              <p>{formatTime(meeting.meeting_time)}</p>
+                          <div className="md-meeting-info-grid">
+                            <div className="md-info-item">
+                              <span className="md-info-icon"></span>
+                              <div className="md-info-content">
+                                <label>Time</label>
+                                <p className="meeting-time-value">{formattedTime}</p>
+                              </div>
+                            </div>
+                            <div className="md-info-item">
+                              <span className="md-info-icon"></span>
+                              <div className="md-info-content">
+                                <label>Duration</label>
+                                <p>{duration} minutes</p>
+                              </div>
+                            </div>
+                            <div className="md-info-item">
+                              <span className="md-info-icon"></span>
+                              <div className="md-info-content">
+                                <label>Sessions</label>
+                                <p>{meeting.meeting_dates?.length || 0} meetings</p>
+                              </div>
+                            </div>
+                            <div className="md-info-item">
+                              <span className="md-info-icon"></span>
+                              <div className="md-info-content">
+                                <label>Mentees</label>
+                                <p>{meeting.mentees?.length || 0} assigned</p>
+                              </div>
                             </div>
                           </div>
-                          <div className="md-info-item">
-                            <span className="md-info-icon"></span>
-                            <div className="md-info-content">
-                              <label>Duration</label>
-                              <p>{meeting.duration_minutes || 30} minutes</p>
-                            </div>
-                          </div>
-                          <div className="md-info-item">
-                            <span className="md-info-icon"></span>
-                            <div className="md-info-content">
-                              <label>Sessions</label>
-                              <p>{meeting.meeting_dates?.length || 0} meetings</p>
-                            </div>
-                          </div>
-                          <div className="md-info-item">
-                            <span className="md-info-icon"></span>
-                            <div className="md-info-content">
-                              <label>Mentees</label>
-                              <p>{meeting.mentees?.length || 0} assigned</p>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Agenda */}
-                        {meeting.agenda && (
-                          <div className="md-meeting-agenda">
-                            <div className="md-agenda-header">
-                              <span className="md-agenda-icon"></span>
-                              <strong>Agenda</strong>
+                          {meeting.agenda && (
+                            <div className="md-meeting-agenda">
+                              <div className="md-agenda-header">
+                                <span className="md-agenda-icon"></span>
+                                <strong>Agenda</strong>
+                              </div>
+                              <p className="md-agenda-text">{meeting.agenda}</p>
                             </div>
-                            <p className="md-agenda-text">{meeting.agenda}</p>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Platform */}
-                        {meeting.platform && (
-                          <div className="md-meeting-platform">
-                            <span className="md-platform-icon"></span>
-                            <span className="md-platform-name">Platform: {meeting.platform}</span>
-                            {meeting.meeting_link && (
-                              <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="md-meeting-link">
-                                Join Meeting →
-                              </a>
-                            )}
-                          </div>
-                        )}
+                          {meeting.platform && (
+                            <div className="md-meeting-platform">
+                              <span className="md-platform-icon"></span>
+                              <span className="md-platform-name">Platform: {meeting.platform}</span>
+                              {meeting.meeting_link && (
+                                <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="md-meeting-link">
+                                  Join Meeting →
+                                </a>
+                              )}
+                            </div>
+                          )}
 
-                        {/* Sessions Section */}
-                        <div className="md-meeting-sessions">
-                          <div className="md-sessions-header">
-                            <h4>Meeting Sessions</h4>
-                            <span className="md-sessions-count">{meeting.meeting_dates?.length || 0} sessions</span>
-                          </div>
-                          <div className="md-sessions-list">
-                            {meeting.meeting_dates && meeting.meeting_dates.length > 0 ? (
-                              meeting.meeting_dates.map((dateObj, index) => {
-                                const dateStatus = getDateStatus(dateObj);
-                                const statusClass = dateStatus === 'completed' ? 'completed' : 'scheduled';
-                                
-                                return (
-                                  <div key={dateObj._id || index} className={`md-session-card ${statusClass}`}>
-                                    <div className="md-session-number">Session #{index + 1}</div>
-                                    <div className="md-session-date">
-                                      <span className="md-session-icon"></span>
-                                      {formatDateTime(dateObj.date, meeting.meeting_time)}
-                                    </div>
-                                    <div className={`md-session-status ${statusClass}`}>
-                                      {dateStatus === 'completed' ? '✓ Completed' : ' Scheduled'}
-                                    </div>
-                                    {dateObj.notes && (
-                                      <div className="md-session-notes">
-                                        <span className="md-notes-icon">📌</span>
-                                        {dateObj.notes}
+                          <div className="md-meeting-sessions">
+                            <div className="md-sessions-header">
+                              <h4>Meeting Sessions</h4>
+                              <span className="md-sessions-count">{meeting.meeting_dates?.length || 0} sessions</span>
+                            </div>
+                            <div className="md-sessions-list">
+                              {meeting.meeting_dates && meeting.meeting_dates.length > 0 ? (
+                                meeting.meeting_dates.map((dateObj, index) => {
+                                  const dateStatus = getDateStatus(dateObj);
+                                  const statusClass = dateStatus === 'completed' ? 'completed' : 'scheduled';
+                                  const sessionTime = dateObj.meeting_time || 'Time TBD';
+                                  
+                                  return (
+                                    <div key={dateObj._id || index} className={`md-session-card ${statusClass}`}>
+                                      <div className="md-session-number">Session #{index + 1}</div>
+                                      <div className="md-session-date">
+                                        <span className="md-session-icon">📅</span>
+                                        {formatDateTime(dateObj.date, sessionTime)}
                                       </div>
-                                    )}
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <p className="md-no-sessions">No sessions scheduled</p>
-                            )}
+                                      <div className={`md-session-status ${statusClass}`}>
+                                        {dateStatus === 'completed' ? '✓ Completed' : '⏳ Scheduled'}
+                                      </div>
+                                      {dateObj.notes && (
+                                        <div className="md-session-notes">
+                                          <span className="md-notes-icon">📌</span>
+                                          {dateObj.notes}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <p className="md-no-sessions">No sessions scheduled</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Mentees List */}
-                        {meeting.mentees && meeting.mentees.length > 0 && (
-                          <div className="md-meeting-mentees">
-                            <div className="md-mentees-header">
-                              <span className="md-mentees-icon"></span>
-                              <strong>Assigned Mentees ({meeting.mentees.length})</strong>
+                          {meeting.mentees && meeting.mentees.length > 0 && (
+                            <div className="md-meeting-mentees">
+                              <div className="md-mentees-header">
+                                <span className="md-mentees-icon">👥</span>
+                                <strong>Assigned Mentees ({meeting.mentees.length})</strong>
+                              </div>
+                              <div className="md-mentees-tags">
+                                {meeting.mentees.map((mentee, idx) => (
+                                  <span key={idx} className="md-mentee-tag" title={`${mentee.email}${mentee.phone_number ? ` - Phone: ${mentee.phone_number}` : ''}`}>
+                                    {mentee.name || mentee.email?.split('@')[0] || 'Mentee'}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
-                            <div className="md-mentees-tags">
-                              {meeting.mentees.map((mentee, idx) => (
-                                <span key={idx} className="md-mentee-tag" title={`${mentee.email}${mentee.phone_number ? ` - Phone: ${mentee.phone_number}` : ''}`}>
-                                  {mentee.name || mentee.email?.split('@')[0] || 'Mentee'}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2160,8 +2170,17 @@ export default function MentorshipDashboard() {
             {activeTab === 'feedback' && (
               <div className="md-feedback-tab">
                 <div className="md-section-header-with-filters">
-                  <br></br>
-                  
+                  <div className="md-title-and-buttons">
+                    <h2 className="md-section-title">Program Feedback ({filteredFeedbacks.length})</h2>
+                    <div className="md-header-buttons">
+                      <button 
+                        className="md-download-btn"
+                        onClick={() => alert('Feedback download coming soon')}
+                      >
+                        📥 Download Details
+                      </button>
+                    </div>
+                  </div>
                   
                   <div className="md-filters-container md-glass-card">
                     <div className="md-filter-row">
@@ -2267,7 +2286,7 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* FEEDBACK MANAGEMENT TAB - WITH PHASE FILTER */}
+            {/* FEEDBACK MANAGEMENT TAB */}
             {activeTab === 'feedback-management' && (
               <div className="md-feedback-management-tab">
                 <div className="md-fm-header">
@@ -2277,7 +2296,6 @@ export default function MentorshipDashboard() {
                   </div>
                 </div>
 
-                {/* Phase Filter for Feedback Management */}
                 <div className="md-fm-filter-container md-glass-card">
                   <div className="md-filter-row">
                     <div className="md-filter-group">
@@ -2311,7 +2329,6 @@ export default function MentorshipDashboard() {
                   </div>
                 ) : (
                   <>
-                    {/* Stats Cards */}
                     <div className="md-fm-stats-grid">
                       <div className="md-fm-stat-card">
                         <div className="md-fm-stat-icon">📋</div>
@@ -2340,7 +2357,6 @@ export default function MentorshipDashboard() {
                       </div>
                     </div>
 
-                    {/* Phases Grid */}
                     <div className="md-fm-phases-grid">
                       {getFilteredPhasesForManagement().map((phase) => {
                         const isEnabled = getFeedbackStatusForPhase(phase.phaseId);
