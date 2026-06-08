@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Common.css';
 import './AdminDashboard.css';
+import * as XLSX from 'xlsx';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -704,6 +705,28 @@ const Adminpage = ({ userEmail }) => {
     );
   });
 
+  const exportFilteredSpeakerDetails = () => {
+    const exportData = filteredWebinars.map((webinar, index) => ({
+      'Serial Number': index + 1,
+      'Phase ID': webinar.phaseId || 'N/A',
+      'Domain': webinar.domain || 'N/A',
+      'Webinar Topic': webinar.topic || 'N/A',
+      'Speaker Name': webinar.speaker?.name || 'N/A',
+      'Speaker Email': webinar.speaker?.email || 'N/A',
+      'Speaker Phone': webinar.speaker?.phoneNumber || 'N/A',
+      'Speaker Batch': webinar.speaker?.batch || 'N/A',
+      'Speaker Department': webinar.speaker?.department || 'N/A',
+      'Designation & Company': webinar.speaker?.designation ? `${webinar.speaker.designation} & ${webinar.speaker.companyName || 'N/A'}` : 'N/A',
+      'City': webinar.alumniCity || 'N/A'
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Speaker Details');
+    const fileName = `webinar_speaker_details_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   const filteredSpeakers = speakers.filter(speaker =>
     speaker.name?.toLowerCase().includes(speakerSearchTerm.toLowerCase())
   );
@@ -899,6 +922,29 @@ const Adminpage = ({ userEmail }) => {
      case 'webinar':
         return (
           <div className="form-card filter-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Speaker Listings</h2>
+              </div>
+              <button
+                type="button"
+                onClick={exportFilteredSpeakerDetails}
+                className="submit1-btn"
+                style={{
+                  backgroundColor: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px 18px',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Export Speaker Details
+              </button>
+            </div>
+
             <div className="filters webinar-filters">
               <select
                 className="input-field"

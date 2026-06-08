@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Eye, X, ChevronDown, ChevronUp } from 'lucide-react';
 import stringSimilarity from 'string-similarity';
+import * as XLSX from 'xlsx';
 import Popup from './Popup';
 import './Common.css';
 import './TopicApprovalForm.css';
@@ -149,6 +150,34 @@ export default function TopicApprovalForm() {
     }
   };
 
+  const exportTopicsToExcel = () => {
+    const summaryData = topics.map((item) => ({
+      Domain: item.domain || '',
+      Topic: item.topic || '',
+      'Total Requested': item.totalRequested || '',
+      Status: item.status || ''
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Topic Requests');
+
+    if (selectedTopic?.students?.length) {
+      const studentDetailsData = selectedTopic.students.map((student) => ({
+        'Serial Number': student.serialNumber,
+        Name: student.name,
+        Email: student.email,
+        Department: student.department,
+        Reason: student.reason
+      }));
+      const detailsSheet = XLSX.utils.json_to_sheet(studentDetailsData);
+      XLSX.utils.book_append_sheet(workbook, detailsSheet, 'Selected Topic Details');
+    }
+
+    const fileName = `topic_requests_${selectedPhase ? selectedPhase.replace(/\s+/g, '_') : 'all'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   return (
     <div className="student-form-page">
       <div className="form-wrapper">
@@ -160,8 +189,15 @@ export default function TopicApprovalForm() {
             <h1 className="form-title topic-approval-header">Requested Topic Approval</h1>
           </div>
 
-          {/* Phase Dropdown */}
-          <div className="topic-phase-row" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem', marginRight: '10.5rem' }}>
+          {/* Export button + Phase Dropdown */}
+          <div className="topic-phase-row" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', marginRight: '10.5rem' }}>
+            <button
+              type="button"
+              onClick={exportTopicsToExcel}
+              className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-green-600 to-teal-500 hover:from-green-700 hover:to-teal-600 transition-all whitespace-nowrap"
+            >
+              Export Topics
+            </button>
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <select
                 value={selectedPhase}
