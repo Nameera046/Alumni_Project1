@@ -1,4 +1,4 @@
-// pages/MentorshipDashboard.js - WITH MEETING EMAIL FILTER & DOWNLOAD BUTTON RIGHT CORNER
+// pages/MentorshipDashboard.js - WITH STUDENT NAME & DEPARTMENT IN MENTEES
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -153,6 +153,59 @@ export default function MentorshipDashboard() {
     return 'N/A';
   };
 
+  // Get display name from user object
+  const getDisplayName = (user) => {
+    if (!user) return 'Unknown User';
+    if (user.name && user.name !== 'N/A') return user.name;
+    if (user.basic?.name) return user.basic.name;
+    if (user.email) return user.email.split('@')[0];
+    if (user.email_id) return user.email_id.split('@')[0];
+    return 'Unknown User';
+  };
+
+  // Get department from user object - EXTRACT ONLY DEPARTMENT NAME
+  const getDepartment = (user) => {
+    if (!user) return 'N/A';
+    
+    // Get the label from basic or direct
+    const label = user.basic?.label || user.label;
+    if (!label) return 'N/A';
+    
+    // Clean the label
+    const cleanLabel = label.trim();
+    
+    // Pattern 1: "BE 2012, CSE; BE 2012, CSE" -> "CSE"
+    let match = cleanLabel.match(/,\s*([^,;]+?)(?:;|$)/);
+    if (match) {
+      return match[1].trim();
+    }
+    
+    // Pattern 2: "BE 2012, CSE" -> "CSE"
+    match = cleanLabel.match(/,\s*([^,]+)$/);
+    if (match) {
+      return match[1].trim();
+    }
+    
+    // Pattern 3: If it's just a short department name like "CSE"
+    if (cleanLabel.length <= 10 && !cleanLabel.includes(',')) {
+      return cleanLabel;
+    }
+    
+    // Pattern 4: Split by comma and get the second part
+    if (cleanLabel.includes(',')) {
+      const parts = cleanLabel.split(',');
+      if (parts.length > 1) {
+        const deptPart = parts[1].trim().split(';')[0].trim();
+        if (deptPart) {
+          return deptPart;
+        }
+      }
+    }
+    
+    // If nothing works, return the whole label
+    return cleanLabel;
+  };
+
   // Apply meeting filters including email
   const applyMeetingFilters = () => {
     let filtered = [...meetings];
@@ -295,7 +348,7 @@ export default function MentorshipDashboard() {
     
     const formattedData = dataToDownload.map(mentor => ({
       id: mentor._id?.toString().slice(-8) || 'N/A',
-      name: (mentor.name && mentor.name !== 'N/A') ? mentor.name : getNameFromEmail(mentor.email || mentor.email_id),
+      name: (mentor.name && mentor.name !== 'N/A') ? mentor.name : getDisplayName(mentor),
       email: mentor.email || mentor.email_id || 'N/A',
       phone_number: getDisplayPhoneNumber(mentor),
       description: (mentor.description && mentor.description !== 'N/A') ? mentor.description : (mentor.supportDescription || '—'),
@@ -307,7 +360,7 @@ export default function MentorshipDashboard() {
     downloadCSV(formattedData, 'mentors_details', headers);
   };
 
-  // Download Mentees Details with Phone Numbers
+  // Download Mentees Details with Student Name & Department
   const downloadMentees = () => {
     const dataToDownload = filteredMentees.length > 0 ? filteredMentees : mentees;
     
@@ -316,10 +369,12 @@ export default function MentorshipDashboard() {
       return;
     }
 
-    const headers = ['ID', 'Email', 'Phone Number', 'Area of Interest', 'Description', 'Phase', 'Status', 'Request Date'];
+    const headers = ['ID', 'Student Name', 'Department', 'Email', 'Phone Number', 'Area of Interest', 'Description', 'Phase', 'Status', 'Request Date'];
     
     const formattedData = dataToDownload.map(mentee => ({
       id: mentee._id?.toString().slice(-8) || 'N/A',
+      student_name: getDisplayName(mentee),
+      department: getDepartment(mentee),
       email: mentee.email || mentee.email_id || 'N/A',
       phone_number: getDisplayPhoneNumber(mentee),
       area_of_interest: mentee.area_of_interest || mentee.areaOfInterest || 'Not specified',
@@ -353,6 +408,7 @@ export default function MentorshipDashboard() {
     for (let i = 1; i <= maxMentees; i++) {
       headers.push(`Mentee ${i} Name`);
       headers.push(`Mentee ${i} Email`);
+      headers.push(`Mentee ${i} Department`);
     }
     
     const formattedData = dataToDownload.map(assignment => {
@@ -372,14 +428,16 @@ export default function MentorshipDashboard() {
       
       if (assignment.mentees && assignment.mentees.length > 0) {
         assignment.mentees.forEach((mentee, index) => {
-          row[`mentee_${index + 1}_name`] = mentee.name || 'Unknown Mentee';
-          row[`mentee_${index + 1}_email`] = mentee.email || 'No email';
+          row[`mentee_${index + 1}_name`] = getDisplayName(mentee);
+          row[`mentee_${index + 1}_email`] = mentee.email || mentee.email_id || 'No email';
+          row[`mentee_${index + 1}_department`] = getDepartment(mentee);
         });
       }
       
       for (let i = (assignment.mentees?.length || 0) + 1; i <= maxMentees; i++) {
         row[`mentee_${i}_name`] = '';
         row[`mentee_${i}_email`] = '';
+        row[`mentee_${i}_department`] = '';
       }
       
       return row;
@@ -404,7 +462,7 @@ export default function MentorshipDashboard() {
       const meetingTime = meeting.meeting_dates?.[0]?.meeting_time || 'N/A';
       const mentorPhone = getDisplayPhoneNumber(meeting.mentorDetails);
       const menteesList = meeting.mentees && meeting.mentees.length > 0
-        ? meeting.mentees.map(m => `${m.name || 'Mentee'} (${m.email || 'No email'})`).join('; ')
+        ? meeting.mentees.map(m => `${getDisplayName(m)} (${m.email || 'No email'}) - Dept: ${getDepartment(m)}`).join('; ')
         : 'No mentees assigned';
       
       return {
@@ -727,19 +785,21 @@ export default function MentorshipDashboard() {
     }
   };
 
-  // Fetch all mentees
+  // Fetch all mentees - UPDATED to include student name and department
   const fetchMentees = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/dashboard/mentees`);
       if (res.data && res.data.success) {
         const menteesData = res.data.mentees || [];
-        const menteesWithStatus = menteesData.map(mentee => ({
+        const menteesWithDetails = menteesData.map(mentee => ({
           ...mentee,
+          student_name: getDisplayName(mentee),
+          department: getDepartment(mentee),
           status: mentee.status || 'pending'
         }));
-        setMentees(menteesWithStatus);
-        applyMenteeFilters(menteesWithStatus, menteeFilters);
-        setStats(prev => ({ ...prev, totalMentees: menteesWithStatus.length }));
+        setMentees(menteesWithDetails);
+        applyMenteeFilters(menteesWithDetails, menteeFilters);
+        setStats(prev => ({ ...prev, totalMentees: menteesWithDetails.length }));
       }
     } catch (err) {
       console.error("Error fetching mentees:", err);
@@ -756,7 +816,11 @@ export default function MentorshipDashboard() {
         const assignmentsData = res.data.assignments || [];
         const assignmentsWithMentees = assignmentsData.map(assignment => ({
           ...assignment,
-          mentees: assignment.mentees || []
+          mentees: (assignment.mentees || []).map(mentee => ({
+            ...mentee,
+            student_name: getDisplayName(mentee),
+            department: getDepartment(mentee)
+          }))
         }));
         setAssignments(assignmentsWithMentees);
         applyAssignmentFilters(assignmentsWithMentees, assignmentFilters);
@@ -814,7 +878,7 @@ export default function MentorshipDashboard() {
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(mentor => {
-        const name = (mentor.name || getNameFromEmail(mentor.email) || '').toLowerCase();
+        const name = (mentor.name || getDisplayName(mentor) || '').toLowerCase();
         const email = (mentor.email || '').toLowerCase();
         const description = (mentor.description || '').toLowerCase();
         return name.includes(searchLower) || email.includes(searchLower) || description.includes(searchLower);
@@ -833,8 +897,8 @@ export default function MentorshipDashboard() {
       
       switch (filters.sortBy) {
         case 'name':
-          aValue = (a.name || getNameFromEmail(a.email) || '').toLowerCase();
-          bValue = (b.name || getNameFromEmail(b.email) || '').toLowerCase();
+          aValue = (a.name || getDisplayName(a) || '').toLowerCase();
+          bValue = (b.name || getDisplayName(b) || '').toLowerCase();
           break;
         case 'email':
           aValue = (a.email || '').toLowerCase();
@@ -870,10 +934,14 @@ export default function MentorshipDashboard() {
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(mentee => {
+        const name = (mentee.student_name || getDisplayName(mentee) || '').toLowerCase();
         const email = (mentee.email || '').toLowerCase();
+        const department = (mentee.department || getDepartment(mentee) || '').toLowerCase();
         const area = (mentee.area_of_interest || '').toLowerCase();
         const description = (mentee.description || '').toLowerCase();
-        return email.includes(searchLower) || 
+        return name.includes(searchLower) || 
+               email.includes(searchLower) || 
+               department.includes(searchLower) ||
                area.includes(searchLower) || 
                description.includes(searchLower);
       });
@@ -962,8 +1030,8 @@ export default function MentorshipDashboard() {
       
       switch (filters.sortBy) {
         case 'mentorName':
-          aValue = (a.mentorDetails?.name || getNameFromEmail(a.mentorDetails?.email) || '').toLowerCase();
-          bValue = (b.mentorDetails?.name || getNameFromEmail(b.mentorDetails?.email) || '').toLowerCase();
+          aValue = (a.mentorDetails?.name || '').toLowerCase();
+          bValue = (b.mentorDetails?.name || '').toLowerCase();
           break;
         case 'mentorEmail':
           aValue = (a.mentorDetails?.email || '').toLowerCase();
@@ -1371,7 +1439,7 @@ export default function MentorshipDashboard() {
             className={`md-nav-item ${activeTab === 'feedback-management' ? 'md-active' : ''}`}
             onClick={() => handleNavClick('feedback-management')}
           >
-             Feedback Management
+            ⚙️ Feedback Management
             <span className="md-nav-count">{allPhases.length}</span>
           </button>
         </nav>
@@ -1417,7 +1485,7 @@ export default function MentorshipDashboard() {
                         className="md-download-btn"
                         onClick={downloadMentors}
                       >
-                         Download Details
+                        📥 Download Details
                       </button>
                     </div>
                   </div>
@@ -1522,9 +1590,7 @@ export default function MentorshipDashboard() {
                           {filteredMentors.map((mentor) => {
                             const displayName = mentor.name && mentor.name !== 'N/A' 
                               ? mentor.name 
-                              : mentor.email && mentor.email !== 'N/A'
-                                ? getNameFromEmail(mentor.email)
-                                : 'Unknown Mentor';
+                              : getDisplayName(mentor);
                             
                             const displayEmail = mentor.email && mentor.email !== 'N/A' 
                               ? mentor.email 
@@ -1565,7 +1631,7 @@ export default function MentorshipDashboard() {
                                       onClick={() => handleDeleteClick('mentor', mentor)}
                                       title="Delete Mentor"
                                     >
-                                      Delete
+                                      🗑️
                                     </button>
                                   </td>
                                 )}
@@ -1580,7 +1646,7 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* MENTEES TAB - FIXED TABLE STRUCTURE */}
+            {/* MENTEES TAB - WITH STUDENT NAME & DEPARTMENT */}
             {activeTab === 'mentees' && (
               <div className="md-mentees-tab">
                 <div className="md-section-header-with-filters">
@@ -1599,7 +1665,7 @@ export default function MentorshipDashboard() {
                         className="md-download-btn"
                         onClick={downloadMentees}
                       >
-                        Download Details
+                        📥 Download Details
                       </button>
                     </div>
                   </div>
@@ -1611,7 +1677,7 @@ export default function MentorshipDashboard() {
                         <input
                           type="text"
                           name="search"
-                          placeholder="Search by email, area of interest, or description..."
+                          placeholder="Search by name, department, email, area of interest, or description..."
                           value={menteeFilters.search}
                           onChange={handleMenteeFilterChange}
                           className="md-filter-input"
@@ -1659,6 +1725,7 @@ export default function MentorshipDashboard() {
                           onChange={handleMenteeFilterChange}
                           className="md-filter-select"
                         >
+                          <option value="name">Name</option>
                           <option value="email">Email</option>
                           <option value="area_of_interest">Area of Interest</option>
                           <option value="phase">Phase</option>
@@ -1708,6 +1775,8 @@ export default function MentorshipDashboard() {
                         <thead>
                           <tr>
                             <th>ID</th>
+                            <th>Student Name</th>
+                            <th>Department</th>
                             <th>Email</th>
                             <th>Phone Number</th>
                             <th>Area of Interest</th>
@@ -1720,6 +1789,8 @@ export default function MentorshipDashboard() {
                         </thead>
                         <tbody>
                           {filteredMentees.map((mentee) => {
+                            const displayName = getDisplayName(mentee);
+                            const displayDepartment = getDepartment(mentee);
                             const displayEmail = mentee.email && mentee.email !== 'N/A' ? mentee.email : 'No email';
                             const displayPhone = getDisplayPhoneNumber(mentee);
                             const displayArea = mentee.area_of_interest && mentee.area_of_interest !== 'N/A' ? mentee.area_of_interest : 'Not specified';
@@ -1735,6 +1806,8 @@ export default function MentorshipDashboard() {
                             return (
                               <tr key={mentee._id}>
                                 <td className="md-id-cell">MT{(mentee._id?.toString() || '').slice(-6)}</td>
+                                <td className="md-name-cell">{displayName}</td>
+                                <td className="md-department-cell">{displayDepartment}</td>
                                 <td className="md-email-cell">{displayEmail}</td>
                                 <td className="md-phone-cell">{displayPhone}</td>
                                 <td className="md-interest-cell">{displayArea}</td>
@@ -1753,7 +1826,7 @@ export default function MentorshipDashboard() {
                                       onClick={() => handleDeleteClick('mentee', mentee)}
                                       title="Delete Mentee"
                                     >
-                                      Delete
+                                      🗑️
                                     </button>
                                   </td>
                                 )}
@@ -1768,7 +1841,7 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* ASSIGNMENTS TAB */}
+            {/* ASSIGNMENTS TAB - WITH DEPARTMENT */}
             {activeTab === 'assignments' && (
               <div className="md-assignments-tab">
                 <div className="md-section-header-with-filters">
@@ -1779,7 +1852,7 @@ export default function MentorshipDashboard() {
                         className="md-download-btn"
                         onClick={downloadAssignments}
                       >
-                         Download Details
+                        📥 Download Details
                       </button>
                     </div>
                   </div>
@@ -1878,7 +1951,8 @@ export default function MentorshipDashboard() {
                               {assignment.mentees.map((mentee, idx) => (
                                 <div key={idx} className="md-mentee-item-full">
                                   <div className="md-mentee-details-full">
-                                    <div><strong>Name:</strong> {mentee.name || 'Mentee'}</div>
+                                    <div><strong>Name:</strong> {getDisplayName(mentee)}</div>
+                                    <div><strong>Department:</strong> {getDepartment(mentee)}</div>
                                     <div><strong>Email:</strong> {mentee.email || 'No email'}</div>
                                     {mentee.phone_number && mentee.phone_number !== 'N/A' && (
                                       <div><strong>Phone:</strong> {mentee.phone_number}</div>
@@ -1913,7 +1987,7 @@ export default function MentorshipDashboard() {
                                 onClick={() => handleDeleteClick('assignment', assignment)}
                                 title="Delete Assignment"
                               >
-                                 Delete
+                                🗑️ Delete
                               </button>
                             )}
                           </div>
@@ -1936,7 +2010,7 @@ export default function MentorshipDashboard() {
                         className="md-download-btn"
                         onClick={downloadMeetings}
                       >
-                        Download Details
+                        📥 Download Details
                       </button>
                     </div>
                   </div>
@@ -2043,7 +2117,7 @@ export default function MentorshipDashboard() {
                               <h3 className="md-mentor-name">{meeting.mentorDetails?.name || 'Mentor'}</h3>
                               <p className="md-mentor-email">{meeting.mentorDetails?.email || 'No email'}</p>
                               {meeting.mentorDetails?.phone_number && meeting.mentorDetails.phone_number !== 'N/A' && (
-                                <p className="md-mentor-phone">Phone: {meeting.mentorDetails.phone_number}</p>
+                                <p className="md-mentor-phone">📞 {meeting.mentorDetails.phone_number}</p>
                               )}
                             </div>
                             <div className="md-meeting-badge">
@@ -2055,28 +2129,28 @@ export default function MentorshipDashboard() {
 
                           <div className="md-meeting-info-grid">
                             <div className="md-info-item">
-                              <span className="md-info-icon"></span>
+                              <span className="md-info-icon">⏰</span>
                               <div className="md-info-content">
                                 <label>Time</label>
                                 <p className="meeting-time-value">{formattedTime}</p>
                               </div>
                             </div>
                             <div className="md-info-item">
-                              <span className="md-info-icon"></span>
+                              <span className="md-info-icon">⏱️</span>
                               <div className="md-info-content">
                                 <label>Duration</label>
                                 <p>{duration} minutes</p>
                               </div>
                             </div>
                             <div className="md-info-item">
-                              <span className="md-info-icon"></span>
+                              <span className="md-info-icon">📅</span>
                               <div className="md-info-content">
                                 <label>Sessions</label>
                                 <p>{meeting.meeting_dates?.length || 0} meetings</p>
                               </div>
                             </div>
                             <div className="md-info-item">
-                              <span className="md-info-icon"></span>
+                              <span className="md-info-icon">👥</span>
                               <div className="md-info-content">
                                 <label>Mentees</label>
                                 <p>{meeting.mentees?.length || 0} assigned</p>
@@ -2087,7 +2161,7 @@ export default function MentorshipDashboard() {
                           {meeting.agenda && (
                             <div className="md-meeting-agenda">
                               <div className="md-agenda-header">
-                                <span className="md-agenda-icon"></span>
+                                <span className="md-agenda-icon">📋</span>
                                 <strong>Agenda</strong>
                               </div>
                               <p className="md-agenda-text">{meeting.agenda}</p>
@@ -2096,7 +2170,7 @@ export default function MentorshipDashboard() {
 
                           {meeting.platform && (
                             <div className="md-meeting-platform">
-                              <span className="md-platform-icon"></span>
+                              <span className="md-platform-icon">💻</span>
                               <span className="md-platform-name">Platform: {meeting.platform}</span>
                               {meeting.meeting_link && (
                                 <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="md-meeting-link">
@@ -2151,8 +2225,8 @@ export default function MentorshipDashboard() {
                               </div>
                               <div className="md-mentees-tags">
                                 {meeting.mentees.map((mentee, idx) => (
-                                  <span key={idx} className="md-mentee-tag" title={`${mentee.email}${mentee.phone_number ? ` - Phone: ${mentee.phone_number}` : ''}`}>
-                                    {mentee.name || mentee.email?.split('@')[0] || 'Mentee'}
+                                  <span key={idx} className="md-mentee-tag" title={`${getDisplayName(mentee)} | ${getDepartment(mentee)} | ${mentee.email}${mentee.phone_number ? ` | Phone: ${mentee.phone_number}` : ''}`}>
+                                    {getDisplayName(mentee)}
                                   </span>
                                 ))}
                               </div>

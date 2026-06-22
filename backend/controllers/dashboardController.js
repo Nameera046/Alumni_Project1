@@ -1,4 +1,4 @@
-// controllers/dashboardController.js - WITH PHONE NUMBERS ADDED & FIXED ASSIGNMENTS & PHASE ID FROM MENTOR
+// controllers/dashboardController.js - WITH PHONE NUMBERS ADDED & FIXED ASSIGNMENTS & PHASE ID FROM MENTOR & BASIC OBJECT FOR MENTEES
 const Phase = require("../models/Phase");
 const MenteeRequest = require("../models/MenteeRequest");
 const MentorRegistration = require("../models/MentorRegistration");
@@ -112,6 +112,7 @@ exports.getAllMentees = async (req, res) => {
           _id: m._id,
           mentee_user_id: m.mentee_user_id,
           user_id: user?._id || m.mentee_user_id,
+          basic: user?.basic || null, // ✅ ADD THIS - includes name, email_id, label, department info
           name: user?.basic?.name || "Unknown Mentee",
           email: user?.basic?.email_id || "No email found",
           phone_number: extractPhoneNumber(user),
@@ -199,6 +200,7 @@ exports.getAllAssignments = async (req, res) => {
             
             return {
               _id: menteeId,
+              basic: mentee?.basic || null, // ✅ ADD THIS
               name: mentee?.basic?.name || "Unknown Mentee",
               email: mentee?.basic?.email_id || "No email",
               phone_number: menteePhone,
@@ -220,7 +222,7 @@ exports.getAllAssignments = async (req, res) => {
           mentees: mentees,
           commencement_date: assignment.commencement_date,
           end_date: assignment.end_date,
-          phaseId: phaseId,  // ✅ Now fetches from mentor registration
+          phaseId: phaseId,
           createdAt: assignment.createdAt
         };
       })
@@ -277,6 +279,7 @@ exports.getAllMeetings = async (req, res) => {
             const mentee = await User.findById(menteeId);
             return {
               _id: menteeId,
+              basic: mentee?.basic || null, // ✅ ADD THIS
               name: mentee?.basic?.name || "Unknown Mentee",
               email: mentee?.basic?.email_id || "No email",
               phone_number: extractPhoneNumber(mentee)
