@@ -325,20 +325,27 @@ a { text-decoration: none; }
   padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   color: var(--text-secondary); font-size: 13px;
+  vertical-align: middle;
+  word-break: break-word; /* Ensures long content wraps */
 }
 .md-data-table tbody tr:hover { background: var(--accent-light); }
 .md-data-table tbody tr:last-child td { border-bottom: none; }
 
 /* Cell variants */
-.md-id-cell     { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.md-id-cell     { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 .md-name-cell   { font-weight: 500; color: var(--text-primary); }
-.md-email-cell  { font-family: var(--font-mono); font-size: 12px; }
-.md-phone-cell  { font-family: var(--font-mono); font-size: 12px; color: var(--success); font-weight: 500; }
+.md-email-cell  { font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
+.md-phone-cell  { font-family: var(--font-mono); font-size: 12px; color: var(--success); font-weight: 500; white-space: nowrap; }
 .md-date-cell   { font-size: 12px; white-space: nowrap; }
 .md-interest-cell { font-weight: 500; color: var(--accent); font-size: 12px; }
+.md-department-cell { font-weight: 500; color: var(--text-primary); }
 .md-description-cell {
-  max-width: 220px; white-space: normal; word-wrap: break-word;
-  font-size: 12px; color: var(--text-muted); line-height: 1.4;
+  max-width: 220px;
+  white-space: normal;
+  word-wrap: break-word;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 .md-actions-cell { text-align: center; white-space: nowrap; }
 
@@ -430,7 +437,7 @@ a { text-decoration: none; }
   justify-content: space-between; gap: var(--s4);
 }
 .md-mentor-info h4 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
-.md-mentor-info .md-email { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+.md-mentor-info .md-email { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); word-break: break-all; }
 .md-mentor-info .md-phone { font-size: 12px; color: var(--success); margin-top: 2px; }
 
 .md-mentee-count {
@@ -450,7 +457,7 @@ a { text-decoration: none; }
   background: var(--surface-2); border-radius: var(--r); padding: var(--s3) var(--s4);
   font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;
 }
-.md-mentee-details-full > div { color: var(--text-secondary); }
+.md-mentee-details-full > div { color: var(--text-secondary); word-break: break-word; }
 .md-mentee-details-full strong { color: var(--text-primary); }
 
 .md-assignment-footer {
@@ -513,9 +520,9 @@ a { text-decoration: none; }
   flex-shrink: 0;
 }
 .md-avatar-text { font-size: 17px; font-weight: 600; color: #fff; }
-.md-mentor-details { flex: 1; }
+.md-mentor-details { flex: 1; min-width: 0; }
 .md-mentor-name  { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
-.md-mentor-email { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+.md-mentor-email { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); word-break: break-all; }
 .md-mentor-phone { font-size: 12px; color: var(--success); margin-top: 2px; }
 
 .md-meeting-badge .md-badge {
@@ -540,7 +547,7 @@ a { text-decoration: none; }
   display: block; font-size: 10.5px; font-weight: 600;
   color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px;
 }
-.md-info-content p { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.md-info-content p { font-size: 14px; font-weight: 500; color: var(--text-primary); word-break: break-word; }
 
 /* Agenda */
 .md-meeting-agenda {
@@ -551,7 +558,7 @@ a { text-decoration: none; }
 .md-agenda-header { display: flex; align-items: center; gap: var(--s2); margin-bottom: 6px; }
 .md-agenda-icon { font-size: 16px; }
 .md-agenda-header strong { font-size: 13px; color: var(--text-primary); }
-.md-agenda-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.md-agenda-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; word-break: break-word; }
 
 /* Platform */
 .md-meeting-platform {
@@ -560,7 +567,7 @@ a { text-decoration: none; }
   background: var(--success-light); border-radius: var(--r);
 }
 .md-platform-icon { font-size: 16px; }
-.md-platform-name { font-size: 13px; font-weight: 500; color: var(--success); flex: 1; }
+.md-platform-name { font-size: 13px; font-weight: 500; color: var(--success); flex: 1; word-break: break-word; }
 .md-meeting-link {
   padding: 5px 14px; background: var(--success); color: #fff;
   border-radius: var(--r-sm); font-size: 12px; font-weight: 500;
@@ -590,7 +597,7 @@ a { text-decoration: none; }
 .md-session-card.scheduled { border-left-color: var(--accent); }
 .md-session-card:hover { transform: translateX(3px); }
 .md-session-number { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
-.md-session-date { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
+.md-session-date { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); word-break: break-word; }
 .md-session-icon { font-size: 13px; }
 .md-session-status {
   display: inline-block; margin-top: 6px;
@@ -603,6 +610,7 @@ a { text-decoration: none; }
   margin-top: var(--s3); padding-top: var(--s2);
   border-top: 1px solid var(--border);
   font-size: 11.5px; color: var(--text-muted);
+  word-break: break-word;
 }
 .md-notes-icon { font-size: 11px; }
 .md-no-sessions { text-align: center; padding: var(--s5); color: var(--text-muted); font-size: 13px; }
@@ -620,6 +628,7 @@ a { text-decoration: none; }
   border: 1px solid var(--accent-mid);
   border-radius: 20px; font-size: 12px; font-weight: 500; color: var(--accent);
   transition: background var(--t);
+  word-break: break-word;
 }
 .md-mentee-tag:hover { background: #e0e7ff; }
 
@@ -636,8 +645,8 @@ a { text-decoration: none; }
   display: flex; align-items: flex-start; justify-content: space-between;
   flex-wrap: wrap; gap: var(--s3);
 }
-.md-feedback-header h4 { font-size: 14px; font-weight: 600; }
-.md-feedback-header p { font-size: 12px; color: var(--text-muted); }
+.md-feedback-header h4 { font-size: 14px; font-weight: 600; word-break: break-word; }
+.md-feedback-header p { font-size: 12px; color: var(--text-muted); word-break: break-all; }
 .md-feedback-phase {
   display: inline-block; margin-top: 4px;
   background: var(--accent-light); color: var(--accent);
@@ -647,6 +656,7 @@ a { text-decoration: none; }
   display: flex; flex-direction: column; gap: var(--s3);
   background: var(--surface-2); border-radius: var(--r); padding: var(--s4);
   font-size: 13px; color: var(--text-secondary);
+  word-break: break-word;
 }
 
 /* ============================================================
@@ -720,18 +730,20 @@ a { text-decoration: none; }
 .md-fm-toggle-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
 .md-fm-card-body { padding: var(--s5) var(--s6); }
-.md-fm-phase-name { font-size: 15px; font-weight: 600; margin-bottom: var(--s3); }
+.md-fm-phase-name { font-size: 15px; font-weight: 600; margin-bottom: var(--s3); word-break: break-word; }
 .md-fm-phase-dates {
   display: flex; align-items: center; gap: 6px;
   font-size: 12.5px; color: var(--text-muted);
   margin-bottom: var(--s4); padding-bottom: var(--s4);
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 .md-fm-info-message {
   display: flex; align-items: flex-start; gap: var(--s2);
   padding: var(--s3) var(--s4); border-radius: var(--r);
   font-size: 12.5px; line-height: 1.45; margin-bottom: var(--s3);
   background: var(--surface-2); color: var(--text-secondary);
+  word-break: break-word;
 }
 .md-fm-info-message .info-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
 .md-fm-updated {
@@ -739,6 +751,7 @@ a { text-decoration: none; }
   padding-top: var(--s3); margin-top: var(--s3);
   border-top: 1px solid var(--border);
   font-size: 11.5px; color: var(--text-muted);
+  flex-wrap: wrap;
 }
 
 .md-fm-empty-state {
@@ -903,6 +916,12 @@ a { text-decoration: none; }
   .md-fm-card-header { flex-direction: column; gap: var(--s3); align-items: flex-start; }
   .md-fm-toggle-btn { width: 100%; justify-content: center; }
   .md-meeting-badge { margin-left: 56px; }
+  .md-data-table table { font-size: 12px; min-width: 100%; }
+  .md-data-table td, .md-data-table th { padding: 8px 10px; }
+  .md-assignments-grid { grid-template-columns: 1fr; }
+  .md-feedback-grid { grid-template-columns: 1fr; }
+  .md-title-and-buttons { flex-direction: column; align-items: stretch; }
+  .md-header-buttons { justify-content: flex-start; }
 }
 
 /* ============================================================
