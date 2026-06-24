@@ -78,16 +78,20 @@ export default function WebinarSpeakerAssignmentForm() {
         const data = await response.json();
         console.log('Fetched topic approvals:', data);
         console.log('formData.domain:', formData.domain);
+        // Only show topics that are approved (not On Hold)
         const filteredTopics = data.filter(topic => {
           const topicDomainNormalized = topic.domain.toLowerCase().replace(/\s*\([^)]*\)\s*$/, '');
           const formDomainNormalized = formData.domain.toLowerCase().replace(/\s*\([^)]*\)\s*$/, '');
           const domainMatch = topicDomainNormalized === formDomainNormalized;
-          const approvalMatch = topic.approval === 'Approved' || topic.approval === 'On Hold';
-          console.log(`Topic: ${topic.topic}, domain: ${topic.domain}, approval: ${topic.approval}, domainMatch: ${domainMatch}, approvalMatch: ${approvalMatch}`);
+          const approvalMatch = topic.approval === 'Approved';
+          console.log(
+            `Topic: ${topic.topic}, domain: ${topic.domain}, approval: ${topic.approval}, domainMatch: ${domainMatch}, approvalMatch: ${approvalMatch}`
+          );
           return domainMatch && approvalMatch;
         });
         console.log('Filtered topics:', filteredTopics);
         setTopics(filteredTopics);
+
       } catch (error) {
         console.error('Error fetching topics:', error);
       }
@@ -356,7 +360,7 @@ export default function WebinarSpeakerAssignmentForm() {
             <div className="icon-wrapper">
               <Building2 className="header-icon" />
             </div>
-            <h1 className="form-title">Speaker Assignment Form</h1>
+            <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">Speaker Assignment Form</h1>
             {currentPhase && (
               <p className="current-phase">Current Phase: {currentPhase.phaseId}</p>
             )}
@@ -482,7 +486,8 @@ export default function WebinarSpeakerAssignmentForm() {
                     htmlFor="speaker-photo-upload"
                     className={`field-label input-field cursor-pointer flex items-center gap-2 ${errors.speakerPhoto ? 'border-red-500' : ''}`}
                   >
-                    <Upload className="field-icon" /> {formData.speakerPhoto ? formData.speakerPhoto.name : "Choose photo or drag here"}
+                    {/* <Upload className="field-icon" /> */}
+                    {formData.speakerPhoto ? formData.speakerPhoto.name : "Choose photo or drag here"}
                   </label>
                   {errors.speakerPhoto && <p className="text-red-500 text-sm mt-1">{errors.speakerPhoto}</p>}
                 </div>

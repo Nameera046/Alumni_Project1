@@ -58,7 +58,8 @@ const Adminpage = ({ userEmail }) => {
   useEffect(() => {
     console.log('Adminpage loaded for email:', userEmail);
   }, [userEmail]);
-  const [activeView, setActiveView] = useState(null);
+  const [activeView, setActiveView] = useState('phase');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRemoveDomain, setShowRemoveDomain] = useState(false);
   const [domains, setDomains] = useState([{ department: '', domain: '' }]);
   const [activeCoordinatorView, setActiveCoordinatorView] = useState(null);
@@ -863,6 +864,85 @@ const Adminpage = ({ userEmail }) => {
   const [completedDocsRows, setCompletedDocsRows] = useState([]);
   const [completedDocsLoading, setCompletedDocsLoading] = useState(false);
 
+  // Webinar Docs filters + export (like prize winners page)
+  const [webinarDocsFilters, setWebinarDocsFilters] = useState({
+    phaseId: '',
+    department: '',
+    month: '',
+    topic: '',
+  });
+
+  const getMonthKeyFromRow = (row) => {
+    if (!row?.webinarDate) return '';
+    const date = new Date(row.webinarDate);
+    if (Number.isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const webinarDocsPhaseOptions = Array.from(
+    new Set(completedDocsRows.map((r) => r.phaseId).filter(Boolean))
+  ).sort((a, b) => Number(a) - Number(b));
+
+  const webinarDocsDepartmentOptions = Array.from(
+    new Set(completedDocsRows.map((r) => r.department).filter(Boolean))
+  ).sort();
+
+  const webinarDocsMonthOptions = Array.from(
+    new Set(completedDocsRows.map((r) => getMonthKeyFromRow(r)).filter(Boolean))
+  )
+    .sort()
+    .map((value) => ({ value, label: getMonthLabel(value) }));
+
+  const webinarDocsTopicOptions = Array.from(
+    new Set(completedDocsRows.map((r) => r.topic || r.webinarTopic).filter(Boolean))
+  ).sort();
+
+  const filteredCompletedDocsRows = completedDocsRows.filter((row) => {
+    const phaseId = String(row.phaseId ?? '');
+    const department = row.department ?? '';
+    const month = getMonthKeyFromRow(row);
+    const topic = (row.topic ?? row.webinarTopic ?? '').toString();
+
+    return (
+      (!webinarDocsFilters.phaseId || phaseId === String(webinarDocsFilters.phaseId)) &&
+      (!webinarDocsFilters.department || department === webinarDocsFilters.department) &&
+      (!webinarDocsFilters.month || month === webinarDocsFilters.month) &&
+      (!webinarDocsFilters.topic || topic === webinarDocsFilters.topic)
+    );
+  });
+
+  const exportFilteredWebinarDocs = () => {
+    if (!filteredCompletedDocsRows.length) {
+      alert('No completed webinar documents available to export.');
+      return;
+    }
+
+    const exportData = filteredCompletedDocsRows.map((row, idx) => {
+      const registeredCount = row.registeredCount ?? row.reg_count ?? 'N/A';
+      const attendedCount = row.attendedCount ?? row.attended ?? 'N/A';
+      const docsAvailable = row.hasDocuments ?? row.documentsAvailable ?? false;
+
+      return {
+        'Serial Number': idx + 1,
+        'Phase ID': row.phaseId ?? 'N/A',
+        'Department': row.department ?? 'N/A',
+        'Webinar Topic': row.topic ?? row.webinarTopic ?? 'N/A',
+        'Webinar Date': row.webinarDate ? new Date(row.webinarDate).toLocaleDateString() : 'N/A',
+        'Registered Count': registeredCount,
+        'Attended Count': attendedCount,
+        'Documents Available': docsAvailable ? 'Yes' : 'No',
+      };
+    });
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Completed Webinar Docs');
+
+    const fileName = `webinar_completed_documents_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+
   useEffect(() => {
     if (activeView !== 'webinarDocs') return;
 
@@ -892,6 +972,70 @@ const renderContent = () => {
             <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
               <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Details Active Page</h2>
             </div>
+
+            <button
+              type="button"
+              className="submit1-btn"
+              style={{
+                backgroundColor: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={exportFilteredWebinarDocs}
+            >
+              Export Completed Docs
+            </button>
+          </div>
+
+          <div className="filters webinar-filters">
+            <select
+              className="input-field"
+              value={webinarDocsFilters.phaseId}
+              onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, phaseId: e.target.value })}
+            >
+              <option value="">All Phases</option>
+              {webinarDocsPhaseOptions.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            <select
+              className="input-field"
+              value={webinarDocsFilters.department}
+              onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, department: e.target.value })}
+            >
+              <option value="">All Departments</option>
+              {webinarDocsDepartmentOptions.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+
+            <select
+              className="input-field"
+              value={webinarDocsFilters.month}
+              onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, month: e.target.value })}
+            >
+              <option value="">All Months</option>
+              {webinarDocsMonthOptions.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+
+            <select
+              className="input-field"
+              value={webinarDocsFilters.topic}
+              onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, topic: e.target.value })}
+            >
+              <option value="">All Topics</option>
+              {webinarDocsTopicOptions.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
           </div>
 
           <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
@@ -912,12 +1056,12 @@ const renderContent = () => {
                   <tr>
                     <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>Loading completed docs...</td>
                   </tr>
-                ) : completedDocsRows.length === 0 ? (
+                ) : filteredCompletedDocsRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>No completed webinar documents found.</td>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>No completed webinar documents found for the selected filters.</td>
                   </tr>
                 ) : (
-                  completedDocsRows.map((row, idx) => {
+                  filteredCompletedDocsRows.map((row, idx) => {
                     const webinarId = row.webinarId;
                     const registeredCount = row.registeredCount ?? row.reg_count ?? 'N/A';
                     const attendedCount = row.attendedCount ?? row.attended ?? 'N/A';
@@ -952,6 +1096,7 @@ const renderContent = () => {
           </div>
         </div>
       );
+
 
     case 'phase':
       return (
@@ -1139,31 +1284,40 @@ const renderContent = () => {
             </button>
           </div>
         );
-     case 'webinar':
-        return (
-          <div className="form-card filter-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-              <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Speaker Listings</h2>
-              </div>
-              <button
-                type="button"
-                onClick={exportFilteredSpeakerDetails}
-                className="submit1-btn"
-                style={{
-                  backgroundColor: '#16a34a',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '10px 18px',
-                  borderRadius: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                Export Speaker Details
-              </button>
+    case 'webinar':
+      return (
+        <div className="form-card filter-card admin-webinar-speaker">
+          <div className="mobile-compact-filters">
+            <button
+              type="button"
+              className="mobile-export-btn"
+              onClick={exportFilteredSpeakerDetails}
+            >
+              Export
+            </button>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Speaker Listings</h2>
             </div>
+            <button
+              type="button"
+              onClick={exportFilteredSpeakerDetails}
+              className="submit1-btn desktop-export-btn"
+              style={{
+                backgroundColor: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Export Speaker Details
+            </button>
+          </div>
 
             <div className="filters webinar-filters">
               <select
@@ -1214,7 +1368,7 @@ const renderContent = () => {
                 ))}
               </select>
             </div>
-            <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
+        <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
               <table className="admin-data-table webinar-table" style={{ minWidth: "1200px", borderCollapse: "collapse", tableLayout: "fixed" }}>
     <thead>
       <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
@@ -1761,14 +1915,23 @@ const renderContent = () => {
         );
     case 'prizeWinners':
       return (
-        <div className="form-card filter-card">
+        <div className="form-card filter-card admin-prize-winners">
+          <div className="mobile-compact-filters">
+            <button
+              type="button"
+              className="mobile-export-btn"
+              onClick={exportFilteredPrizeWinners}
+            >
+              Export
+            </button>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
             <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
               <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Prize Winners Details</h2>
             </div>
             <button
               type="button"
-              className="submit1-btn"
+              className="submit1-btn desktop-export-btn"
               style={{
                 backgroundColor: '#16a34a',
                 color: '#ffffff',
@@ -1873,9 +2036,25 @@ return (
         <div className="orb orb-pink"></div>
       </div>
       <div className="form-wrapper">
+
         <div>
           <div className="form-header">
-            <h1 className="form-title">Webinar Coordinator Dashboard</h1>
+                      {/* Mobile header: hamburger + sidebar */}
+          <div className="mobile-top-menu">
+            <button
+              type="button"
+              className="mobile-menu-button"
+              aria-label="Open menu"
+              onClick={() => setSidebarOpen(true)}
+            >
+              ☰
+            </button>
+          
+            <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">
+              <br></br>
+              Webinar Coordinator Dashboard</h1>
+            
+        </div>
             {/* Current Phase Display */}
             {!phaseLoading && (
               <div style={{
@@ -1908,10 +2087,82 @@ return (
               </div>
             )}
           </div>
+          {sidebarOpen && (
+            <div className="admin-sidebar-overlay" onClick={() => setSidebarOpen(false)}>
+              <aside className="admin-sidebar" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  className="admin-sidebar-close"
+                  aria-label="Close menu"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  ✕
+                </button>
+
+                <div className="admin-sidebar-items">
+                  <button
+                    type="button"
+                    className={`admin-sidebar-item ${activeView === 'phase' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveView('phase');
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    Phase Management
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`admin-sidebar-item ${activeView === 'webinarDocs' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveView('webinarDocs');
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    Webinar Details
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`admin-sidebar-item ${activeView === 'webinar' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveView('webinar');
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    Webinar Speaker Details
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`admin-sidebar-item ${activeView === 'prizeWinners' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveView('prizeWinners');
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    Prize Winner Details
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`admin-sidebar-item ${activeView === 'coordiators' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveView('coordiators');
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    Coordinator Management
+                  </button>
+                </div>
+              </aside>
+            </div>
+          )}
+
           <div className="admin-buttons">
             <button className="submit-btn" onClick={() => setActiveView('phase')}>Phase Management</button>
-            <button className="submit-btn" onClick={() => setActiveView('webinar')}>Webinar Details</button>
-            <button className="submit-btn" onClick={() => setActiveView('webinarDocs')}>Webinar Details Active Page</button>
+            {/* <button className="submit-btn" onClick={() => setActiveView('webinar')}>Webinar Details</button> */}
+            <button className="submit-btn" onClick={() => setActiveView('webinarDocs')}>Webinar Details</button>
             <button className="submit-btn" onClick={() => setActiveView('webinar')}>Webinar Speaker Details</button>
 
             <button className="submit-btn" onClick={() => setActiveView('prizeWinners')}>Prize Winners Details</button>

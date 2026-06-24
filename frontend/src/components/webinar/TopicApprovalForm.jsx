@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Eye, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { FaFileExport } from "react-icons/fa";
 import stringSimilarity from 'string-similarity';
 import * as XLSX from 'xlsx';
 import Popup from './Popup';
@@ -186,16 +187,28 @@ export default function TopicApprovalForm() {
             <div className="icon-wrapper">
               <CheckCircle className="header-icon" />
             </div>
-            <h1 className="form-title topic-approval-header">Requested Topic Approval</h1>
+            <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider topic-approval-header">Requested Topic Approval</h1>
           </div>
 
           {/* Export button + Phase Dropdown */}
-          <div className="topic-phase-row" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', marginRight: '10.5rem' }}>
+          
+          <div className="topic-phase-row" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', marginRight:'10.5rem' }}>
             <button
-              type="button"
               onClick={exportTopicsToExcel}
-              className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-green-600 to-teal-500 hover:from-green-700 hover:to-teal-600 transition-all whitespace-nowrap"
+              style={{
+                backgroundColor: '#16a34a',
+                color: 'white',
+                border: 'none',
+                padding: '10px',
+                borderRadius: '13px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '16px'
+              }}
             >
+              <FaFileExport size={16} />
               Export Topics
             </button>
             <div style={{ position: 'relative', display: 'inline-block' }}>

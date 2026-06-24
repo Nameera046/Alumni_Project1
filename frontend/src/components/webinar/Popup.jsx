@@ -28,8 +28,9 @@ const Popup = ({ message, type = 'success', onClose, autoClose = true, autoClose
   const isSuccess = type === 'success';
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay modal-overlay-dark" onClick={onClose}>
       <div className={`modal-card popup-card ${type}`} onClick={(e) => e.stopPropagation()}>
+
         <button className="popup-close" onClick={onClose}>
           <X size={20} />
         </button>

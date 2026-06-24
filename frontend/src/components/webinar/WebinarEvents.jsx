@@ -957,7 +957,7 @@ export default function WebinarEvents() {
             <div className="icon-wrapper">
               <FiBookOpen className="header-icon" />
             </div>
-            <h1 className="form-title">Webinar Details</h1>
+            <h1 className="text-2xl font-bold text-[#7d48b9]">Webinar Details</h1>
             <p className="webinar-subtitle">
               {webinar.title}
             </p>
@@ -1070,7 +1070,7 @@ export default function WebinarEvents() {
               <div className="icon-wrapper">
                   <FiBookOpen className="header-icon" />
               </div>
-              <h1 className="form-title webinar-events-title">Webinar Events</h1>
+              <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider webinar-events-title">Webinar Events</h1>
               <p className="webinar-subtitle">
                 Current Phase: {phaseLoading ? 'Loading...' : currentPhase?.displayText || 'Not Set'}
               </p>
@@ -1122,9 +1122,11 @@ export default function WebinarEvents() {
                         ? new Date(monthWebinars[0].webinarDate).toLocaleString('default', { month: 'long', year: 'numeric' })
                         : month.charAt(0).toUpperCase() + month.slice(1)}
                     </h2>
-                    {(isCoordinator || isAdmin) && (
+                    {isAdmin && (
                       <button className="generate-btn" onClick={() => generateCircular(month)}>Generate Circular</button>
                     )}
+
+
                   </div>
                   <div className="webinar-events-grid">
                     {monthWebinars.map((wb, i) => (
@@ -1165,7 +1167,7 @@ export default function WebinarEvents() {
               <div className="icon-wrapper">
                 <FiAward className="header-icon" />
               </div>
-              <h1 className="form-title">Download Certificate</h1>
+              <h1 className="text-2xl font-bold text-[#7d48b9]">Download Certificate</h1>
               <p className="webinar-subtitle">
                 {selectedWebinarForCertificate.title}
               </p>
@@ -1256,9 +1258,9 @@ export default function WebinarEvents() {
       {/* Circular Preview Modal */}
       {showCircularPreview && circularData && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-5 z-50">
-          <div className="bg-gradient-to-br from-purple-50/70 via-pink-50/70 to-blue-50/70
-                          rounded-2xl max-w-5xl w-full shadow-2xl relative overflow-y-auto
-                          max-h-[90vh] webinar-modal-scroll-hidden p-8">
+          <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50
+             rounded-2xl max-w-5xl w-full shadow-2xl relative overflow-y-auto
+             max-h-[90vh] webinar-modal-scroll-hidden p-8">
             <div className="flex justify-end mt-4 max-w-5xl">
               <button
                 onClick={() => {
@@ -1275,7 +1277,7 @@ export default function WebinarEvents() {
               <div className="icon-wrapper">
                 <FiBookOpen className="header-icon" />
               </div>
-              <h1 className="form-title">Webinar Circular Preview</h1>
+              <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">Webinar Circular Preview</h1>
               <p className="form-title flex justify-center mb-6">
                 {circularMonth} Webinar Schedule
               </p>

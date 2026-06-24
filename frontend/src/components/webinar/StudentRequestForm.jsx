@@ -263,7 +263,7 @@ export default function StudentRequestForm() {
             <div className="icon-wrapper">
               <GraduationCap className="header-icon" />
             </div>
-            <h1 className="form-title">Webinar Request Form</h1>
+            <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">Webinar Request Form</h1>
               <div className="webinar-subtitle">
                 {phaseLoading ? 'Loading current phase...' : `Phase: ${currentPhase}`}
               </div>

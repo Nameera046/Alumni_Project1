@@ -193,6 +193,130 @@
 }
 
 @media (max-width: 768px) {
+  /* Mobile: hide the desktop admin buttons (only sidebar is used) */
+  .admin-buttons {
+    display: none !important;
+  }
+
+  /* Keep active-page filters in a single horizontal row (scroll instead of wrapping) */
+  .filters-single-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  /* Same behavior for pages that accidentally use an extra wrapper class */
+  .webinar-single-row-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+
+  .filters-single-row .filter-field {
+    flex: 0 0 auto;
+    min-width: 170px;
+  }
+
+  /* Mobile: also hide any accidental duplicates */
+  .admin-buttons button {
+    display: none !important;
+  }
+
+
+  /* Mobile top menu */
+  .mobile-top-menu {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    justify-content: flex-start;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0);
+    backdrop-filter: blur(8px);
+  }
+
+  .mobile-menu-button {
+    font-size: 22px;
+    line-height: 1;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: #ffffff;
+    cursor: pointer;
+  }
+
+  /* Sidebar */
+  .admin-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 100;
+  }
+
+  .admin-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: min(320px, 85vw);
+    background: #ffffff;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    padding: 14px;
+    transform: translateX(0);
+    overflow-y: auto;
+    animation: adminSidebarIn 180ms ease-out;
+  }
+
+  @keyframes adminSidebarIn {
+    from { transform: translateX(-15px); opacity: 0.6; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .admin-sidebar-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .admin-sidebar-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 40px;
+  }
+
+  .admin-sidebar-item {
+    width: 100%;
+    text-align: left;
+    padding: 12px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgba(124, 58, 237, 0.06);
+    cursor: pointer;
+    font-weight: 700;
+    color: #4b3f91;
+  }
+
+  .admin-sidebar-item.active {
+    background: linear-gradient(to right, #7c3aed, #3b82f6);
+    border-color: rgba(0,0,0,0);
+    color: #fff;
+  }
+
   .student-form-page .form-wrapper {
     overflow-x: hidden !important;
   }

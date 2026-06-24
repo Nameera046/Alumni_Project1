@@ -229,7 +229,7 @@ export default function WebinarStudentFeedbackForm() {
             <div className="icon-wrapper">
               <GraduationCap className="header-icon" />
             </div>
-            <h1 className="form-title">Student Feedback Form</h1>
+            <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">Student Feedback Form</h1>
             <p className="webinar-subtitle">
               Provide your feedback for the attended webinar
             </p>

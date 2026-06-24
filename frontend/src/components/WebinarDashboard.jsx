@@ -855,7 +855,7 @@ function DashboardShell() {
     if (isPhaseFuture(phase)) {
       const phaseNumber = parseInt(phase.split(' ')[1]);
       if (phaseDetails[phase]) {
-        const monthMappings = {
+          const monthMappings = {
           6: ['Dec 2025', 'Jan 2026', 'Feb 2026', 'Mar 2026'],
           7: ['Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026'],
           8: ['Jan 2027', 'Feb 2027', 'Mar 2027', 'Apr 2027'],
@@ -866,7 +866,7 @@ function DashboardShell() {
           domains: phaseDetails[phase].map((d, idx) => ({
             id: `d${idx + 1}`,
             name: d.domain,
-            planned: 0,
+            planned: phaseNumber === 7 ? 8 : 0,
             conducted: 0,
             postponed: 0,
             totalSpeakers: 0,
@@ -944,9 +944,9 @@ function DashboardShell() {
             <div className="icon-wrapper">
               <GraduationCap className="header-icon" />
             </div>
-            <h1 className="form-title text-3xl font-extrabold">
-              WELCOME BACK!! {userName || 'User'} 👋
-            </h1>
+              <h1 className="text-3xl font-extrabold text-[#4b3f91]">
+                WELCOME BACK!! {userName || "User"} 👋
+              </h1>
           </div>
         <header className="wb-header">
           <div className="header-left">

@@ -204,6 +204,9 @@ app.use('/api/auth/placement', authPlacementRoutes);
 // Mount admin routes under /api/admin prefix
 app.use('/api/admin', adminRoutes);
 
+// ========== WEBINAR ADMIN ROUTES (MAIN FIELD EDIT) ==========
+app.use('/api', require('./routes/webinarAdmin'));
+
 // ========== COMPLETED WEBINAR DETAILS ==========
 app.use('/api', require('./routes/completedWebinarDetails'));
 console.log('✅ completedWebinarDetails routes mounted at /api');
@@ -224,6 +227,7 @@ app.locals.Register = WebinarRegister;
 
 
 // ========== WEBINAR API ENDPOINTS ==========
+
 app.use("/api/screens", require("./routes/screens"));
 
 
