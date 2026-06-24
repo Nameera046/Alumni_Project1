@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './Common.css';
 import { FiBookOpen } from "react-icons/fi";
 import { Trash2 } from "lucide-react";
+import * as XLSX from 'xlsx';
 import WebinarCompletedDetailsForm from './WebinarCompletedDetailsForm';
 import ConfirmationDialog from './ConfirmationDialog';
 import Popup from './Popup';
@@ -44,14 +45,55 @@ export default function WebinarDetails() {
     setShowDeleteDialog(false);
   };
 
+  const exportRegistrationData = () => {
+    const exportData = registrations.map((registration, index) => ({
+      'Serial Number': index + 1,
+      'Student Name': registration.userDetails?.name || 'N/A',
+      'Student Email': registration.email || 'N/A',
+      'Student Department': registration.userDetails?.department || 'N/A',
+      'Student Batch': registration.userDetails?.batch || 'N/A'
+    }));
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Webinar Registrations');
+    const fileName = `webinar_registrations_${webinar?.topic?.replace(/\s+/g, '_') || id}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const exportFeedbackData = () => {
+    const exportData = feedback.map((item, index) => ({
+      'Serial Number': index + 1,
+      'Student Name': item.student?.name || 'N/A',
+      'Student Email': item.student?.email || 'N/A',
+      'Student Department': item.student?.department || 'N/A',
+      'Student Batch': item.student?.batch || 'N/A',
+      'Feedback': item.feedback || 'No feedback provided'
+    }));
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Webinar Feedback');
+    const fileName = `webinar_feedback_${webinar?.topic?.replace(/\s+/g, '_') || id}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   const renderContent = () => {
     switch (activeView) {
       case 'registration':
         return (
           <div className="form-card">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">
-              Registered Students ({registrations.length})
-            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Registered Students ({registrations.length})
+              </h2>
+              <button
+                type="button"
+                onClick={exportRegistrationData}
+                className="submit1-btn"
+                style={{ backgroundImage: 'linear-gradient(90deg, #16a34a 0%, #14b8a6 100%)', color: 'white', padding: '6px 12px', borderRadius: '10px', minWidth: '80px' }}
+              >
+                Export
+              </button>
+            </div>
 
             <div>
                 <table style={{ width: "810px", borderCollapse: "collapse" }}>
@@ -101,9 +143,19 @@ export default function WebinarDetails() {
       case 'feedback':
         return (
           <div className="form-card">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">
-              Student Feedback ({feedback.length})
-            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Student Feedback ({feedback.length})
+              </h2>
+              <button
+                type="button"
+                onClick={exportFeedbackData}
+                className="submit1-btn"
+                style={{ backgroundImage: 'linear-gradient(90deg, #16a34a 0%, #14b8a6 100%)', color: 'white', padding: '6px 12px', borderRadius: '10px', minWidth: '80px' }}
+              >
+                Export
+              </button>
+            </div>
 
             <div>
                 <table style={{ width: "810px", borderCollapse: "collapse" }}>

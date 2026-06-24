@@ -33,6 +33,8 @@ export default function WebinarEvents() {
   const [circularData, setCircularData] = useState(null);
   const [circularMonth, setCircularMonth] = useState('');
   const [currentPhase, setCurrentPhase] = useState(null);
+  const [phases, setPhases] = useState([]);
+  const [selectedPhase, setSelectedPhase] = useState(null);
   const [phaseLoading, setPhaseLoading] = useState(true);
   const [userEmail, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -559,6 +561,20 @@ export default function WebinarEvents() {
     }
   };
 
+  const fetchPhases = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/phases`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch phases');
+      }
+      const data = await response.json();
+      setPhases(Array.isArray(data.phases) ? data.phases : []);
+    } catch (err) {
+      console.error('Error fetching phases:', err);
+      setPhases([]);
+    }
+  };
+
   const fetchWebinars = async () => {
     try {
       setLoading(true);
@@ -652,7 +668,14 @@ export default function WebinarEvents() {
   useEffect(() => {
     fetchWebinars();
     fetchCurrentPhase();
+    fetchPhases();
   }, []);
+
+  useEffect(() => {
+    if (phases.length > 0 && selectedPhase === null) {
+      setSelectedPhase(currentPhase?.phaseId ?? phases[0].phaseId);
+    }
+  }, [phases, currentPhase, selectedPhase]);
 
   useEffect(() => {
     const fetchUserInfo = () => {
@@ -704,20 +727,21 @@ export default function WebinarEvents() {
   }, [userEmail]);
 
   const phaseWebinars = useMemo(() => {
-    if (!currentPhase?.phaseId) return {};
+    const phaseId = selectedPhase ?? currentPhase?.phaseId;
+    if (!phaseId) return {};
 
     const filtered = {};
     Object.entries(webinars).forEach(([month, monthWebinars]) => {
-      const inCurrentPhase = monthWebinars.filter(
-        (wb) => Number(wb.phaseId) === Number(currentPhase.phaseId)
+      const inSelectedPhase = monthWebinars.filter(
+        (wb) => Number(wb.phaseId) === Number(phaseId)
       );
-      if (inCurrentPhase.length > 0) {
-        filtered[month] = inCurrentPhase;
+      if (inSelectedPhase.length > 0) {
+        filtered[month] = inSelectedPhase;
       }
     });
 
     return filtered;
-  }, [webinars, currentPhase]);
+  }, [webinars, currentPhase, selectedPhase]);
 
   /** ------------------ Webinar Card ------------------ */
   const WebinarCard = ({ webinar }) => {
@@ -1041,14 +1065,33 @@ export default function WebinarEvents() {
       <div className="form-wrapper">
         <div>
           {/* Header */}
-          <div className="form-header webinar-events-header">
-            <div className="icon-wrapper">
-                <FiBookOpen className="header-icon" />
+          <div className="form-header webinar-events-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ minWidth: '220px', flex: '1 1 auto' }}>
+              <div className="icon-wrapper">
+                  <FiBookOpen className="header-icon" />
+              </div>
+              <h1 className="form-title webinar-events-title">Webinar Events</h1>
+              <p className="webinar-subtitle">
+                Current Phase: {phaseLoading ? 'Loading...' : currentPhase?.displayText || 'Not Set'}
+              </p>
             </div>
-            <h1 className="form-title webinar-events-title">Webinar Events</h1>
-            <p className="webinar-subtitle">
-              Current Phase: {phaseLoading ? 'Loading...' : currentPhase?.displayText || 'Not Set'}
-            </p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            {/* <label htmlFor="phase-select" style={{ fontWeight: 700, color: '#4b3f91', whiteSpace: 'nowrap' }}>Phase</label> */}
+            <select
+              id="phase-select"
+              className="select-field"
+              value={selectedPhase ?? ''}
+              onChange={(e) => setSelectedPhase(Number(e.target.value))}
+              style={{ minWidth: '140px', maxWidth: '140px', padding: '0.75rem 0.9rem', fontSize: '0.95rem' }}
+            >
+              <option value="" disabled>Select phase</option>
+              {phases.map((phase) => (
+                <option key={phase.phaseId} value={phase.phaseId}>
+                  Phase {phase.phaseId}
+                </option>
+              ))}
+            </select>
           </div>
 
           {loading ? (

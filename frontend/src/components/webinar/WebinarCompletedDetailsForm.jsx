@@ -35,8 +35,16 @@ const WebinarCompletedDetailsForm = () => {
   const [errors, setErrors] = useState({});
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
   const [attendanceFile, setAttendanceFile] = useState(null);
+  const [attendanceSheetBase64, setAttendanceSheetBase64] = useState('');
   const [attendanceData, setAttendanceData] = useState([]);
+
   const [canDownloadCertificate, setCanDownloadCertificate] = useState(false);
+
+  // Multiple event images upload (below attendance sheet)
+  const [, setEventImageFiles] = useState([]);
+  const [eventImagePreviews, setEventImagePreviews] = useState([]);
+  const [eventImageError, setEventImageError] = useState('');
+
 
   // Fetch webinar details on component mount
   useEffect(() => {
@@ -74,7 +82,7 @@ const WebinarCompletedDetailsForm = () => {
 
       try {
         const res = await fetch(
-          `${API_BASE_URL}/api/member-by-email?email=${formData.prizeWinnerEmail}`
+          `${API_BASE_URL}/api/member-by-email?email=${encodeURIComponent(formData.prizeWinnerEmail)}`
         );
         const data = await res.json();
 
@@ -122,7 +130,7 @@ const WebinarCompletedDetailsForm = () => {
     }
   };
 
-  // Handle file upload
+  // Handle file upload (attendance Excel)
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -131,12 +139,22 @@ const WebinarCompletedDetailsForm = () => {
       if (file.size > maxSize) {
         setErrors(prev => ({ ...prev, attendanceFile: "File size must be less than 25MB" }));
         setAttendanceFile(null);
+        setAttendanceSheetBase64('');
         setAttendanceData([]);
         return;
       }
 
       setErrors(prev => ({ ...prev, attendanceFile: null }));
       setAttendanceFile(file);
+
+      // Store base64 for backend ZIP download
+      const sheetReader = new FileReader();
+      sheetReader.onload = (event) => {
+        setAttendanceSheetBase64(event.target.result || '');
+      };
+      sheetReader.readAsDataURL(file);
+
+      // Also parse attendance excel for certificate eligibility logic
       const reader = new FileReader();
       reader.onload = (event) => {
         const data = new Uint8Array(event.target.result);
@@ -150,6 +168,42 @@ const WebinarCompletedDetailsForm = () => {
       reader.readAsArrayBuffer(file);
     }
   };
+
+
+  // Handle multiple event images upload
+  const handleEventImagesChange = (e) => {
+    const files = Array.from(e.target.files || []);
+
+    if (!files.length) {
+      setEventImageFiles([]);
+      setEventImagePreviews([]);
+      setEventImageError('');
+      return;
+    }
+
+    // basic image validation
+    const accepted = files.filter(f => /^image\//.test(f.type));
+    if (accepted.length !== files.length) {
+      setEventImageError('Only image files are allowed for Event images.');
+      setEventImageFiles([]);
+      setEventImagePreviews([]);
+      return;
+    }
+
+    setEventImageError('');
+    setEventImageFiles(accepted);
+
+    const readers = accepted.map(file => new Promise(resolve => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.readAsDataURL(file);
+    }));
+
+    Promise.all(readers).then(previews => {
+      setEventImagePreviews(previews);
+    });
+  };
+
 
   // Check if prize winner can download certificate
   useEffect(() => {
@@ -194,9 +248,12 @@ const WebinarCompletedDetailsForm = () => {
       newErrors.attendedCount = "Attended Count is required";
     if (!formData.prizeWinnerEmail)
       newErrors.prizeWinnerEmail = "Prize Winner Email is required";
+    else if (!formData.name || !formData.contact)
+      newErrors.prizeWinnerEmail = "Enter a registered student email to fetch winner name and mobile number";
     if (!attendanceFile)
       newErrors.attendanceFile = "Attendance Excel file is required";
 
+    // Event images are optional.
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
@@ -209,9 +266,14 @@ const WebinarCompletedDetailsForm = () => {
           body: JSON.stringify({
             attendedCount: parseInt(formData.attendedCount),
             prizeWinnerEmail: formData.prizeWinnerEmail,
+            prizeWinnerName: formData.name,
+            prizeWinnerMobile: formData.contact,
             attendanceData: attendanceData,
+            attendanceSheet: attendanceSheetBase64,
+            eventImages: eventImagePreviews,
           }),
         });
+
 
         if (response.ok) {
           setPopup({ show: true, message: 'Webinar completion details saved successfully! 🎉', type: 'success' });
@@ -312,6 +374,65 @@ const WebinarCompletedDetailsForm = () => {
                     <div className="error-text">{errors.attendanceFile}</div>
                   )}
                 </div>
+
+                {/* Event images upload (multiple) */}
+                <div className="form-group">
+                  <label className="field-label">
+                    <FiUpload className="field-icon" /> Event Images (can select multiple)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleEventImagesChange}
+                    className="input-field"
+                  />
+                  {eventImageError && (
+                    <div className="error-text">{eventImageError}</div>
+                  )}
+                  {eventImagePreviews && eventImagePreviews.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
+                      {eventImagePreviews.map((src, idx) => (
+                        <div key={idx} style={{ position: 'relative', width: '90px', height: '70px' }}>
+                          <img
+                            src={src}
+                            alt={`event-${idx}`}
+                            style={{ width: '90px', height: '70px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEventImageFiles(prev => prev.filter((_, i) => i !== idx));
+                              setEventImagePreviews(prev => prev.filter((_, i) => i !== idx));
+                              setEventImageError('');
+                            }}
+                            style={{
+                              position: 'absolute',
+                              top: '-8px',
+                              right: '-8px',
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '999px',
+                              border: '1px solid #dc3545',
+                              backgroundColor: '#dc3545',
+                              color: '#fff',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              lineHeight: '22px',
+                              padding: 0,
+                            }}
+                            aria-label={`Remove image ${idx + 1}`}
+                            title="Remove selected image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                </div>
+
                 {/* Prize Winner Email */}
                 <div className="form-group">
                   <label className="field-label">

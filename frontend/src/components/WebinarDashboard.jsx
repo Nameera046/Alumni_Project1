@@ -961,15 +961,7 @@ function DashboardShell() {
           </div>
 
           <div className="header-right">
-            {isAdmin && (
-              <button
-                className="btn-primary"
-                onClick={downloadOverallReport}
-              >
-                Overall Report
-              </button>
-            )}
-            {(!isAdmin || isCoordinatorUser) && (
+            {phases.length > 0 && (
               <div className="phase-menu-row">
                 <select
                   className="phase-select"
@@ -1011,6 +1003,14 @@ function DashboardShell() {
                   )}
                 </div>
               </div>
+            )}
+            {isAdmin && (
+              <button
+                className="btn-primary"
+                onClick={downloadOverallReport}
+              >
+                Overall Report
+              </button>
             )}
           </div>
         </header>

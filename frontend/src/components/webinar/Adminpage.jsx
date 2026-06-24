@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Common.css';
 import './AdminDashboard.css';
+import * as XLSX from 'xlsx';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -15,6 +16,40 @@ const validateDomain = (value) => {
      return "Domain must contain only English letters, numbers, spaces, and standard punctuation.";
 
   return "";
+};
+
+const getMonthKey = (dateValue) => {
+  if (!dateValue) return '';
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const getMonthLabel = (monthKey) => {
+  if (!monthKey) return '';
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+const getMonthsBetween = (startDateValue, endDateValue) => {
+  const startDate = new Date(startDateValue);
+  const endDate = new Date(endDateValue);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return [];
+
+  const months = [];
+  const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+  const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+  while (cursor <= end) {
+    const value = getMonthKey(cursor);
+    months.push({ value, label: getMonthLabel(value) });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return months;
 };
 
 const Adminpage = ({ userEmail }) => {
@@ -56,9 +91,14 @@ const Adminpage = ({ userEmail }) => {
   const [speakers, setSpeakers] = useState([]);
   const [speakerSearchTerm, setSpeakerSearchTerm] = useState('');
   const [showSpeakerDropdown, setShowSpeakerDropdown] = useState(false);
-  const [filterOptions, setFilterOptions] = useState({ phaseIds: [], domains: [], batches: [], departments: [] });
-  const [selectedFilters, setSelectedFilters] = useState({ phaseId: '', domain: '', speakerName: '', batch: '', department: '' });
+  const [filterOptions, setFilterOptions] = useState({ phaseIds: [], phases: [], domains: [], batches: [], departments: [] });
+  const [phaseOptions, setPhaseOptions] = useState([]);
+  const [selectedFilters, setSelectedFilters] = useState({ phaseId: '', domain: '', speakerName: '', batch: '', department: '', month: '' });
   const [lastPhaseDomains, setLastPhaseDomains] = useState([]);
+
+  // Prize winners
+  const [prizeWinners, setPrizeWinners] = useState([]);
+  const [prizeWinnersLoading, setPrizeWinnersLoading] = useState(false);
 
   // Fetch current phase on component mount
   useEffect(() => {
@@ -206,6 +246,48 @@ const Adminpage = ({ userEmail }) => {
       fetchCoordinators();
     }
   }, [activeView]);
+
+  // Fetch prize winners when prize winners view is active
+  useEffect(() => {
+    const fetchPrizeWinners = async () => {
+      setPrizeWinnersLoading(true);
+      try {
+        const [prizeWinnerResponse, filterResponse, phasesResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/prize-winners`),
+          fetch(`${API_BASE_URL}/api/filter-options`),
+          fetch(`${API_BASE_URL}/api/phases`)
+        ]);
+
+        const data = await prizeWinnerResponse.json();
+        const filterData = await filterResponse.json();
+        const phasesData = await phasesResponse.json();
+
+        if (filterResponse.ok) {
+          setFilterOptions(filterData);
+        }
+
+        if (phasesResponse.ok && phasesData?.success) {
+          setPhaseOptions(Array.isArray(phasesData.phases) ? phasesData.phases : []);
+        }
+
+        if (prizeWinnerResponse.ok && data?.success) {
+          setPrizeWinners(Array.isArray(data.data) ? data.data : []);
+        } else {
+          setPrizeWinners([]);
+        }
+      } catch (error) {
+        console.error('Error fetching prize winners:', error);
+        setPrizeWinners([]);
+      } finally {
+        setPrizeWinnersLoading(false);
+      }
+    };
+
+    if (activeView === 'prizeWinners') {
+      fetchPrizeWinners();
+    }
+  }, [activeView]);
+
 
   const handleCreatePhase = async () => {
     // Clear previous errors
@@ -704,13 +786,174 @@ const Adminpage = ({ userEmail }) => {
     );
   });
 
+  const selectedPhase = phaseOptions.find(phase => String(phase.phaseId) === String(selectedFilters.phaseId));
+  const prizeWinnerDomainOptions = [
+    ...new Set(
+      prizeWinners
+        .filter(winner => !selectedFilters.phaseId || String(winner.phaseId) === String(selectedFilters.phaseId))
+        .map(winner => winner.domain)
+        .filter(Boolean)
+    )
+  ].sort();
+  const prizeWinnerMonthOptions = selectedPhase
+    ? getMonthsBetween(selectedPhase.startingDate, selectedPhase.endingDate)
+    : [
+        ...new Set(prizeWinners.map(winner => getMonthKey(winner.webinarDate)).filter(Boolean))
+      ].sort().map(value => ({ value, label: getMonthLabel(value) }));
+
+  const filteredPrizeWinners = prizeWinners.filter(winner => {
+    const { phaseId, domain, month } = selectedFilters;
+    return (
+      (!phaseId || String(winner.phaseId) === String(phaseId)) &&
+      (!domain || winner.domain === domain) &&
+      (!month || getMonthKey(winner.webinarDate) === month)
+    );
+  });
+
+  const exportFilteredSpeakerDetails = () => {
+    const exportData = filteredWebinars.map((webinar, index) => ({
+      'Serial Number': index + 1,
+      'Phase ID': webinar.phaseId || 'N/A',
+      'Domain': webinar.domain || 'N/A',
+      'Webinar Topic': webinar.topic || 'N/A',
+      'Speaker Name': webinar.speaker?.name || 'N/A',
+      'Speaker Email': webinar.speaker?.email || 'N/A',
+      'Speaker Phone': webinar.speaker?.phoneNumber || 'N/A',
+      'Speaker Batch': webinar.speaker?.batch || 'N/A',
+      'Speaker Department': webinar.speaker?.department || 'N/A',
+      'Designation & Company': webinar.speaker?.designation ? `${webinar.speaker.designation} & ${webinar.speaker.companyName || 'N/A'}` : 'N/A',
+      'City': webinar.alumniCity || 'N/A'
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Speaker Details');
+    const fileName = `webinar_speaker_details_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const exportFilteredPrizeWinners = () => {
+    if (filteredPrizeWinners.length === 0) {
+      alert('No prize winner details available to export.');
+      return;
+    }
+
+    const exportData = filteredPrizeWinners.map((winner, index) => ({
+      'Serial Number': index + 1,
+      'Phase': winner.phaseId ?? 'N/A',
+      'Webinar Domain': winner.domain || 'N/A',
+      'Webinar Topic': winner.topic || 'N/A',
+      'Webinar Date': winner.webinarDate ? new Date(winner.webinarDate).toLocaleDateString() : 'N/A',
+      'Prize Winner Name': winner.prizeWinnerName || 'N/A',
+      'Prize Winner Email': winner.prizeWinnerEmail || 'N/A',
+      'Prize Winner Mobile': winner.prizeWinnerMobile || 'N/A'
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Prize Winners');
+    const fileName = `prize_winner_details_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   const filteredSpeakers = speakers.filter(speaker =>
     speaker.name?.toLowerCase().includes(speakerSearchTerm.toLowerCase())
   );
 
-  const renderContent = () => {
+  const [completedDocsRows, setCompletedDocsRows] = useState([]);
+  const [completedDocsLoading, setCompletedDocsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeView !== 'webinarDocs') return;
+
+    const fetchRows = async () => {
+      try {
+        setCompletedDocsLoading(true);
+        const res = await fetch(`${API_BASE_URL}/api/admin/webinars/completed-documents`);
+        const json = await res.json();
+        setCompletedDocsRows(Array.isArray(json.data) ? json.data : []);
+      } catch (e) {
+        console.error('Error fetching completed documents table:', e);
+        setCompletedDocsRows([]);
+      } finally {
+        setCompletedDocsLoading(false);
+      }
+    };
+
+    fetchRows();
+  }, [activeView]);
+
+const renderContent = () => {
   switch (activeView) {
-    case "phase":
+    case 'webinarDocs':
+      return (
+        <div className="form-card filter-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Details Active Page</h2>
+            </div>
+          </div>
+
+          <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
+            <table className="admin-data-table webinar-table" style={{ minWidth: '1100px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#eee' }}>
+                  <th style={{ minWidth: '90px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phase ID</th>
+                  <th style={{ minWidth: '170px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
+                  <th style={{ minWidth: '250px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Topic</th>
+                  <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Date</th>
+                  <th style={{ minWidth: '130px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Registered Count</th>
+                  <th style={{ minWidth: '110px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Attended Count</th>
+                  <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Documents</th>
+                </tr>
+              </thead>
+              <tbody>
+                {completedDocsLoading ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>Loading completed docs...</td>
+                  </tr>
+                ) : completedDocsRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>No completed webinar documents found.</td>
+                  </tr>
+                ) : (
+                  completedDocsRows.map((row, idx) => {
+                    const webinarId = row.webinarId;
+                    const registeredCount = row.registeredCount ?? row.reg_count ?? 'N/A';
+                    const attendedCount = row.attendedCount ?? row.attended ?? 'N/A';
+                    const docsAvailable = row.hasDocuments ?? row.documentsAvailable ?? false;
+
+                    return (
+                      <tr key={webinarId || idx}>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.phaseId ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.department ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.topic ?? row.webinarTopic ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.webinarDate ? new Date(row.webinarDate).toLocaleDateString() : 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{registeredCount}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{attendedCount}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                          {docsAvailable ? (
+                            <a
+                              href={`${API_BASE_URL}/api/admin/webinars/${webinarId}/completed-documents/download`}
+                              style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}
+                            >
+                              Download
+                            </a>
+                          ) : (
+                            'Not Available'
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+
+    case 'phase':
       return (
         <div className="form-card">
           <h2
@@ -899,6 +1142,29 @@ const Adminpage = ({ userEmail }) => {
      case 'webinar':
         return (
           <div className="form-card filter-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Speaker Listings</h2>
+              </div>
+              <button
+                type="button"
+                onClick={exportFilteredSpeakerDetails}
+                className="submit1-btn"
+                style={{
+                  backgroundColor: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px 18px',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Export Speaker Details
+              </button>
+            </div>
+
             <div className="filters webinar-filters">
               <select
                 className="input-field"
@@ -1493,6 +1759,107 @@ const Adminpage = ({ userEmail }) => {
             )}
           </div>
         );
+    case 'prizeWinners':
+      return (
+        <div className="form-card filter-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Prize Winners Details</h2>
+            </div>
+            <button
+              type="button"
+              className="submit1-btn"
+              style={{
+                backgroundColor: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={exportFilteredPrizeWinners}
+            >
+              Export Prize Winners
+            </button>
+          </div>
+
+          <div className="filters webinar-filters">
+            <select
+              className="input-field"
+              value={selectedFilters.phaseId}
+              onChange={(e) => setSelectedFilters({ ...selectedFilters, phaseId: e.target.value, domain: '', month: '' })}
+            >
+              <option value="">All Phases</option>
+              {filterOptions.phases?.map((phase) => (
+                <option key={phase.id} value={phase.id}>{phase.name}</option>
+              ))}
+            </select>
+
+            <select
+              className="input-field"
+              value={selectedFilters.domain}
+              onChange={(e) => setSelectedFilters({ ...selectedFilters, domain: e.target.value })}
+            >
+              <option value="">All Domains</option>
+              {prizeWinnerDomainOptions.map((domain) => (
+                <option key={domain} value={domain}>{domain}</option>
+              ))}
+            </select>
+
+            <select
+              className="input-field"
+              value={selectedFilters.month}
+              onChange={(e) => setSelectedFilters({ ...selectedFilters, month: e.target.value })}
+            >
+              <option value="">All Months</option>
+              {prizeWinnerMonthOptions.map((month) => (
+                <option key={month.value} value={month.value}>{month.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
+            <table className="admin-data-table webinar-table" style={{ minWidth: '1100px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#eee' }}>
+                  <th style={{ minWidth: '100px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phase</th>
+                  <th style={{ minWidth: '180px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Domain</th>
+                  <th style={{ minWidth: '220px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Topic</th>
+                  <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Date</th>
+                  <th style={{ minWidth: '200px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Name</th>
+                  <th style={{ minWidth: '250px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Email</th>
+                  <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Mobile</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prizeWinnersLoading ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>Loading prize winners...</td>
+                  </tr>
+                ) : filteredPrizeWinners.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>No prize winners found.</td>
+                  </tr>
+                ) : (
+                  filteredPrizeWinners.map((w, idx) => (
+                    <tr key={idx}>
+                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.phaseId ?? 'N/A'}</td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.domain ?? 'N/A'}</td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.topic ?? 'N/A'}</td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.webinarDate ? new Date(w.webinarDate).toLocaleDateString() : 'N/A'}</td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerName ?? 'N/A'}</td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerEmail ?? 'N/A'}</td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerMobile ?? 'N/A'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
     default:
       return null;
   }
@@ -1544,6 +1911,10 @@ return (
           <div className="admin-buttons">
             <button className="submit-btn" onClick={() => setActiveView('phase')}>Phase Management</button>
             <button className="submit-btn" onClick={() => setActiveView('webinar')}>Webinar Details</button>
+            <button className="submit-btn" onClick={() => setActiveView('webinarDocs')}>Webinar Details Active Page</button>
+            <button className="submit-btn" onClick={() => setActiveView('webinar')}>Webinar Speaker Details</button>
+
+            <button className="submit-btn" onClick={() => setActiveView('prizeWinners')}>Prize Winners Details</button>
             {/* <button className="submit-btn" onClick={() => setActiveView('domain')}>Domain Management</button> */}
             <button className="submit-btn" onClick={() => setActiveView('coordiators')}>Coordinators Management</button>
           </div>

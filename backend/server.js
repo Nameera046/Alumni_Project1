@@ -8,7 +8,7 @@ const dotenv = require('dotenv');
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json({ limit: "30mb" }));
-// app.use(cors());
+app.use(cors());
 //SSO ROUTES
 const webinarSSORoutes = require('./single-sign-on/routes/webinar');
 app.use('/api/webinar', webinarSSORoutes);
@@ -52,6 +52,9 @@ const RegisterSchema = require('./models/Register');
 const AlumniFeedback = require('./models/AlumniFeedback');
 const WebinarPhase = require('./models/WebinarPhase');
 const CoordinatorModel = require('./models/Coordinator');
+const CompletedWebinarDetails = require('./models/CompletedWebinarDetails');
+const CompletedWebinarDocuments = require('./models/CompletedWebinarDocuments');
+
 
 // Import routes for webinar
 const studentFeedbackRoutes = require('./routes/studentFeedback');
@@ -73,13 +76,14 @@ const jobRequestRoutes = require('./routes/jobRequests');
 const companyMappingRoutes = require('./routes/companyMapping');
 const authPlacementRoutes = require('./routes/authPlacement');
 // ========== IMPORT ADMIN ROUTES ==========
+
 const adminRoutes = require('./routes/admin'); // Assuming your admin routes file is in ./routes/admin.js
 
 
 // Middleware 
 
 //Cors For Producion
-app.use(cors({ origin: ["https://necalumni.nec.edu.in", "https://necalumni.nec.edu.in/alumnimain"], credentials: true }));
+//app.use(cors({ origin: ["https://necalumni.nec.edu.in", "https://necalumni.nec.edu.in/alumnimain"], credentials: true }));
 app.use(express.urlencoded({ extended: true, limit: "30mb" }));
 
 // uploads folder
@@ -175,6 +179,7 @@ app.locals.Register = WebinarRegister;
 app.locals.AlumniFeedback = WebinarAlumniFeedback;
 app.locals.WebinarPhase = WebinarPhaseModel;
 app.locals.Coordinator = WebinarCoordinator;
+app.locals.CompletedWebinarDetails = CompletedWebinarDetails;
 
 // ========== WEBINAR ROUTES ==========
 app.use('/api', studentFeedbackRoutes);
@@ -199,8 +204,29 @@ app.use('/api/auth/placement', authPlacementRoutes);
 // Mount admin routes under /api/admin prefix
 app.use('/api/admin', adminRoutes);
 
+// ========== COMPLETED WEBINAR DETAILS ==========
+app.use('/api', require('./routes/completedWebinarDetails'));
+console.log('✅ completedWebinarDetails routes mounted at /api');
+
+// ========== COMPLETED WEBINAR DOCUMENTS (ZIP DOWNLOAD) ==========
+app.use('/api', require('./routes/completedWebinarDocuments'));
+console.log('✅ completedWebinarDocuments routes mounted at /api');
+
+// Provide documents model for routes
+app.locals.CompletedWebinarDocuments = CompletedWebinarDocuments;
+
+// ========== COMPLETED WEBINAR DOCUMENTS ADMIN ========== 
+app.use('/api', require('./routes/completedWebinarDocumentsAdmin'));
+app.locals.CompletedWebinarDetails = CompletedWebinarDetails;
+app.locals.Register = WebinarRegister;
+
+
+
+
 // ========== WEBINAR API ENDPOINTS ==========
 app.use("/api/screens", require("./routes/screens"));
+
+
 app.use("/api/user-access", require("./routes/screens")); // Mount screens.user-access
 
 app.use("/api", require("./routes/api"));
@@ -276,7 +302,7 @@ app.get('/api/member-by-email', async (req, res) => {
                       '';
     res.json({
       found: true,
-      name: member.basic?.name || '',
+      name: getMemberName(member),
       contact_no: contact_no,
       department: department || '',
       batch: batch
@@ -331,12 +357,86 @@ app.get('/api/webinars/:id', async (req, res) => {
 // Update webinar with completion details
 app.put('/api/webinars/:id/complete', async (req, res) => {
   try {
-    const { attendedCount, prizeWinnerEmail, attendanceData } = req.body;
+    const { attendedCount, prizeWinnerEmail, attendanceData, eventImages } = req.body;
+
+    // For this completion-details table (separate collection), we also accept:
+    // - attendanceSheet (base64 string)
+    // - prizeWinnerMobile
+    // - eventImages (array)
+    // Since current frontend sends only attendance count + prizeWinnerEmail + eventImages base64 previews,
+    // we derive missing fields as empty for now.
+    const attendanceSheet = req.body.attendanceSheet ?? '';
+    const normalizedPrizeWinnerEmail = (prizeWinnerEmail ?? '').trim();
+    let prizeWinnerName = req.body.prizeWinnerName ?? req.body.name ?? '';
+    let prizeWinnerMobile = req.body.prizeWinnerMobile ?? req.body.prizeWinnerMobileNumber ?? req.body.contact ?? '';
+
+    if (normalizedPrizeWinnerEmail) {
+      const escapedEmail = normalizedPrizeWinnerEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const prizeWinnerMember = await Member.findOne({
+        'basic.email_id': { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
+      });
+
+      if (!prizeWinnerMember) {
+        return res.status(400).json({ error: 'Prize winner email was not found in members collection' });
+      }
+
+      prizeWinnerName = getMemberName(prizeWinnerMember) || prizeWinnerName || '';
+      prizeWinnerMobile = prizeWinnerMember.contact_details?.mobile ||
+        prizeWinnerMember.contact_details?.phone ||
+        prizeWinnerMember.mobile ||
+        prizeWinnerMember.phone ||
+        prizeWinnerMember.contact ||
+        prizeWinnerMobile ||
+        '';
+    }
+
     const webinar = await WebinarWebinar.findByIdAndUpdate(
       req.params.id,
-      { attendedCount, prizeWinnerEmail },
+      {
+        attendedCount,
+        prizeWinnerEmail: normalizedPrizeWinnerEmail,
+        prizeWinnerName,
+        prizeWinnerMobile,
+      },
       { new: true }
     );
+
+    // Store completed webinar details in separate table (legacy)
+    const CompletedWebinarDetails = req.app.locals.CompletedWebinarDetails;
+    await CompletedWebinarDetails.findOneAndUpdate(
+      { webinarId: req.params.id },
+      {
+        attendanceSheet,
+        eventImages: Array.isArray(eventImages) ? eventImages : [],
+        attendanceCount: attendedCount ?? 0,
+        prizeWinnerEmail: normalizedPrizeWinnerEmail,
+        prizeWinnerName: prizeWinnerName ?? '',
+        prizeWinnerMobile: prizeWinnerMobile ?? '',
+      },
+      { new: true, upsert: true }
+    );
+
+// Store uploaded files in new collection CompletedWebinarDocuments (WEBINAR DB)
+    const normalizedEventImages = Array.isArray(eventImages) ? eventImages : [];
+    const CompletedWebinarDocumentsWebinar = webinarConnection.model(
+      'CompletedWebinarDocuments',
+      CompletedWebinarDocuments.schema,
+      'completedwebinardocuments'
+    );
+
+    await CompletedWebinarDocumentsWebinar.findOneAndUpdate(
+      { webinarId: req.params.id },
+      {
+        attendanceSheet: attendanceSheet ?? '',
+        eventImages: normalizedEventImages,
+        attendanceCount: attendedCount ?? 0,
+      },
+      { new: true, upsert: true }
+    );
+
+    // Update webinar status
+    await WebinarWebinar.findByIdAndUpdate(req.params.id, { status: 'Completed' }, { new: true });
+
     if (!webinar) {
       return res.status(404).json({ error: 'Webinar not found' });
     }
@@ -1110,6 +1210,30 @@ function getDepartmentFromMember(member) {
     if (/MECHAN|MECH/.test(fullText)) return 'MECH';
   } catch (e) {}
   return "";
+}
+
+function getMemberName(member) {
+  if (!member) return "";
+  const candidates = [
+    member.basic?.name,
+    member.basic?.full_name,
+    member.basic?.fullName,
+    member.name,
+    member.full_name,
+    member.fullName,
+    member.personal?.name,
+    member.personal_details?.name,
+    member.profile?.name,
+  ];
+
+  for (const candidate of candidates) {
+    const value = (candidate || '').toString().trim();
+    if (value) return value;
+  }
+
+  const firstName = member.basic?.first_name || member.basic?.firstName || member.first_name || member.firstName || '';
+  const lastName = member.basic?.last_name || member.basic?.lastName || member.last_name || member.lastName || '';
+  return `${firstName} ${lastName}`.trim();
 }
 
 // Test endpoint
