@@ -787,30 +787,6 @@ const Adminpage = ({ userEmail }) => {
     );
   });
 
-  const selectedPhase = phaseOptions.find(phase => String(phase.phaseId) === String(selectedFilters.phaseId));
-  const prizeWinnerDomainOptions = [
-    ...new Set(
-      prizeWinners
-        .filter(winner => !selectedFilters.phaseId || String(winner.phaseId) === String(selectedFilters.phaseId))
-        .map(winner => winner.domain)
-        .filter(Boolean)
-    )
-  ].sort();
-  const prizeWinnerMonthOptions = selectedPhase
-    ? getMonthsBetween(selectedPhase.startingDate, selectedPhase.endingDate)
-    : [
-        ...new Set(prizeWinners.map(winner => getMonthKey(winner.webinarDate)).filter(Boolean))
-      ].sort().map(value => ({ value, label: getMonthLabel(value) }));
-
-  const filteredPrizeWinners = prizeWinners.filter(winner => {
-    const { phaseId, domain, month } = selectedFilters;
-    return (
-      (!phaseId || String(winner.phaseId) === String(phaseId)) &&
-      (!domain || winner.domain === domain) &&
-      (!month || getMonthKey(winner.webinarDate) === month)
-    );
-  });
-
   const exportFilteredSpeakerDetails = () => {
     const exportData = filteredWebinars.map((webinar, index) => ({
       'Serial Number': index + 1,
@@ -830,30 +806,6 @@ const Adminpage = ({ userEmail }) => {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Speaker Details');
     const fileName = `webinar_speaker_details_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-  };
-
-  const exportFilteredPrizeWinners = () => {
-    if (filteredPrizeWinners.length === 0) {
-      alert('No prize winner details available to export.');
-      return;
-    }
-
-    const exportData = filteredPrizeWinners.map((winner, index) => ({
-      'Serial Number': index + 1,
-      'Phase': winner.phaseId ?? 'N/A',
-      'Webinar Domain': winner.domain || 'N/A',
-      'Webinar Topic': winner.topic || 'N/A',
-      'Webinar Date': winner.webinarDate ? new Date(winner.webinarDate).toLocaleDateString() : 'N/A',
-      'Prize Winner Name': winner.prizeWinnerName || 'N/A',
-      'Prize Winner Email': winner.prizeWinnerEmail || 'N/A',
-      'Prize Winner Mobile': winner.prizeWinnerMobile || 'N/A'
-    }));
-
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Prize Winners');
-    const fileName = `prize_winner_details_${new Date().toISOString().slice(0, 10)}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -1284,40 +1236,31 @@ const renderContent = () => {
             </button>
           </div>
         );
-    case 'webinar':
-      return (
-        <div className="form-card filter-card admin-webinar-speaker">
-          <div className="mobile-compact-filters">
-            <button
-              type="button"
-              className="mobile-export-btn"
-              onClick={exportFilteredSpeakerDetails}
-            >
-              Export
-            </button>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Speaker Listings</h2>
+     case 'webinar':
+        return (
+          <div className="form-card filter-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Speaker Listings</h2>
+              </div>
+              <button
+                type="button"
+                onClick={exportFilteredSpeakerDetails}
+                className="submit1-btn"
+                style={{
+                  backgroundColor: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px 18px',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Export Speaker Details
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={exportFilteredSpeakerDetails}
-              className="submit1-btn desktop-export-btn"
-              style={{
-                backgroundColor: '#16a34a',
-                color: '#ffffff',
-                border: 'none',
-                padding: '10px 18px',
-                borderRadius: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Export Speaker Details
-            </button>
-          </div>
 
             <div className="filters webinar-filters">
               <select
