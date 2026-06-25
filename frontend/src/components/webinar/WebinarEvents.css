@@ -1117,17 +1117,18 @@ body.webinar-events-hide-scrollbar::-webkit-scrollbar {
 
   .webinar-events-page .webinar-card-actions {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     margin-top: 8px;
     gap: 10px;
   }
 
   .webinar-events-page .webinar-card-actions .submit-btn {
     width: 100%;
-    flex: none;
+    flex: 1;
     font-size: 0.68rem;
     padding: 7px 8px;
   }
+
 
   .webinar-events-page .webinar-card-certificate .submit-btn {
     font-size: 0.68rem;

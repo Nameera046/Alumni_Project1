@@ -49,6 +49,25 @@ const webinarSchema = new mongoose.Schema({
   prizeWinnerEmail: {
     type: String,
     default: ''
+  },
+  prizeWinnerName: {
+    type: String,
+    default: ''
+  },
+  prizeWinnerMobile: {
+    type: String,
+    default: ''
+  },
+
+  status: {
+    type: String,
+    default: "Not Completed",
+  },
+
+  // Multiple event images uploaded during webinar completion
+  eventImages: {
+    type: [String],
+    default: []
   }
 }, { timestamps: true });
 

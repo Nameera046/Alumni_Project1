@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Eye, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { FaFileExport } from "react-icons/fa";
 import stringSimilarity from 'string-similarity';
 import * as XLSX from 'xlsx';
 import Popup from './Popup';
@@ -186,7 +187,7 @@ export default function TopicApprovalForm() {
             <div className="icon-wrapper">
               <CheckCircle className="header-icon" />
             </div>
-            <h1 className="form-title topic-approval-header">Requested Topic Approval</h1>
+            <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider topic-approval-header">Requested Topic Approval</h1>
           </div>
 
           {/* Export button + Phase Dropdown */}

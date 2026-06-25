@@ -3,7 +3,6 @@ import Home from './components/webinar/Home';
 import PlacementDashboard from './components/placement/PlacementDashboard';
 import WebinarDashboard from "./components/WebinarDashboard";
 
-// Placement imports
 import PlacementAdminDashboard from './components/placement/AdminDashboard';
 import AssignedCompanies from './components/placement/AssignedCompanies';
 import CompanyRegistrationForm from './components/placement/CompanyRegistrationForm';
@@ -47,7 +46,7 @@ import MentorshipDashboard from './components/mentorship/MentorshipDashboard';
 // Local Administration
 import LocalAdminDashboard from './components/local_administration/AdminDashboard';
 
-// Role-based dynamic screen
+
 import DynamicScreen from './components/DynamicScreen';
 
 function App() {

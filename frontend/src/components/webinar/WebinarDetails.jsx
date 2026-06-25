@@ -16,6 +16,26 @@ export default function WebinarDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const userEmail = decodeURIComponent(encodedUserEmail);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editForm, setEditForm] = useState({
+    topic: '',
+    domain: '',
+    webinarDate: '',
+    time: '',
+    venue: '',
+    meetingLink: '',
+    alumniCity: '',
+    speaker: {
+      name: '',
+      email: '',
+      designation: '',
+      companyName: '',
+      department: '',
+      batch: '',
+    }
+  });
+
+
   const [webinar, setWebinar] = useState(location.state?.webinar || null);
   const [registrations, setRegistrations] = useState([]);
   const [feedback, setFeedback] = useState([]);
@@ -24,6 +44,8 @@ export default function WebinarDetails() {
   const [activeView, setActiveView] = useState(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [popup, setPopup] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
 
   const handleDeleteWebinar = async () => {
     try {
@@ -332,22 +354,66 @@ export default function WebinarDetails() {
             <div className="icon-wrapper">
               <FiBookOpen className="header-icon" />
             </div>
-            <h1 className="form-title">Webinar Details</h1>
+            <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">Webinar Details</h1>
             <p className="webinar-subtitle">
               {webinar.topic}
             </p>
           </div>
 
           {/* Delete Button */}
-          <div style={{ textAlign: 'right', margin: '20px 60px' }}>
+      <div style={{ textAlign: 'right', margin: '20px 20px' }}>
+            {/* Edit Webinar Button (visible on eye/details page) */}
             <button
-              className="delete-btn"
-              onClick={() => setShowDeleteDialog(true)}
+              className="edit-btn"
+              onClick={() => {
+                if (!webinar) return;
+                setEditForm({
+                  topic: webinar.topic || '',
+                  domain: webinar.domain || '',
+                  webinarDate: webinar.webinarDate ? new Date(webinar.webinarDate).toISOString().slice(0, 10) : '',
+                  time: webinar.time || '',
+                  venue: webinar.venue || '',
+                  meetingLink: webinar.meetingLink || '',
+                  alumniCity: webinar.alumniCity || '',
+                  speaker: {
+                    name: webinar.speaker?.name || '',
+                    email: webinar.speaker?.email || '',
+                    designation: webinar.speaker?.designation || '',
+                    companyName: webinar.speaker?.companyName || '',
+                    department: webinar.speaker?.department || '',
+                    batch: webinar.speaker?.batch || ''
+                  }
+                });
+                setShowEditDialog(true);
+              }}
               style={{
-                backgroundColor: '#dc2626',
+                backgroundColor: '#10b981',
                 color: 'white',
                 border: 'none',
                 padding: '10px 15px',
+                borderRadius: '13px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '16px',
+                marginRight: '12px'
+              }}
+            >
+              <SquarePen size={16} />
+              Edit Webinar
+            </button>
+
+            <button
+              className="delete-btn"
+              onClick={() => setShowDeleteDialog(true)}
+
+              style={{
+
+                backgroundColor: '#dc2626',
+                color: 'white',
+                border: 'none',
+                padding: '10px',
                 borderRadius: '13px',
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -357,9 +423,10 @@ export default function WebinarDetails() {
               }}
             >
               <Trash2 size={16} />
-              Delete Webinar
+              {/* Delete Webinar */}
             </button>
           </div>
+
 
           {/* Buttons Section */}
           <div className="admin-buttons">
@@ -391,6 +458,226 @@ export default function WebinarDetails() {
           onClose={() => setPopup(null)}
         />
       )}
+
+      {/* Edit Webinar Dialog */}
+      {showEditDialog && webinar && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-5 z-50">
+          <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl relative overflow-y-auto max-h-[90vh] p-6">
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowEditDialog(false)}
+                className="text-purple-900 hover:text-purple-800 text-2xl font-bold"
+              >
+                X
+              </button>
+            </div>
+
+            <h2 className="form-title mb-4">Edit Webinar</h2>
+
+            <div className="form-card">
+              <div
+                className="form-fields"
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Topic</label>
+                  <input
+                    className="input-field"
+                    value={editForm.topic}
+                    onChange={(e) => setEditForm({ ...editForm, topic: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                  <label>Domain</label>
+                  <input
+                    className="input-field"
+                    value={editForm.domain}
+                    onChange={(e) => setEditForm({ ...editForm, domain: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={editForm.webinarDate}
+                    onChange={(e) => setEditForm({ ...editForm, webinarDate: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Time</label>
+                  <input
+                    className="input-field"
+                    value={editForm.time}
+                    onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Venue</label>
+                  <input
+                    className="input-field"
+                    value={editForm.venue}
+                    onChange={(e) => setEditForm({ ...editForm, venue: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Meeting Link</label>
+                  <input
+                    className="input-field"
+                    value={editForm.meetingLink}
+                    onChange={(e) => setEditForm({ ...editForm, meetingLink: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Alumni City</label>
+                  <input
+                    className="input-field"
+                    value={editForm.alumniCity}
+                    onChange={(e) => setEditForm({ ...editForm, alumniCity: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: 'span 2', marginTop: '6px' }}>
+                  <h3 style={{ fontWeight: 800, color: '#4b3f91' }}>Speaker Details</h3>
+                </div>
+
+                <div className="form-group">
+                  <label>Speaker Name</label>
+                  <input
+                    className="input-field"
+                    value={editForm.speaker.name}
+                    onChange={(e) => setEditForm({ ...editForm, speaker: { ...editForm.speaker, name: e.target.value } })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Speaker Email</label>
+                  <input
+                    className="input-field"
+                    value={editForm.speaker.email}
+                    onChange={(e) => setEditForm({ ...editForm, speaker: { ...editForm.speaker, email: e.target.value } })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Designation</label>
+                  <input
+                    className="input-field"
+                    value={editForm.speaker.designation}
+                    onChange={(e) => setEditForm({ ...editForm, speaker: { ...editForm.speaker, designation: e.target.value } })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Company Name</label>
+                  <input
+                    className="input-field"
+                    value={editForm.speaker.companyName}
+                    onChange={(e) => setEditForm({ ...editForm, speaker: { ...editForm.speaker, companyName: e.target.value } })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Department</label>
+                  <input
+                    className="input-field"
+                    value={editForm.speaker.department}
+                    onChange={(e) => setEditForm({ ...editForm, speaker: { ...editForm.speaker, department: e.target.value } })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Batch</label>
+                  <input
+                    className="input-field"
+                    value={editForm.speaker.batch}
+                    onChange={(e) => setEditForm({ ...editForm, speaker: { ...editForm.speaker, batch: e.target.value } })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                  <button
+                    className="submit1-btn"
+                    style={{ backgroundColor: '#4b3f91', color: 'white', opacity: savingEdit ? 0.7 : 1 }}
+                    onClick={async () => {
+                      try {
+                        setSavingEdit(true);
+                        if (!webinar?._id) {
+                          setPopup({ message: 'Webinar id missing.', type: 'error' });
+                          return;
+                        }
+
+                        const payload = {
+                          topic: editForm.topic,
+                          domain: editForm.domain,
+                          webinarDate: editForm.webinarDate,
+                          time: editForm.time,
+                          venue: editForm.venue,
+                          meetingLink: editForm.meetingLink,
+                          alumniCity: editForm.alumniCity,
+                          speaker: {
+                            name: editForm.speaker.name,
+                            email: editForm.speaker.email,
+                            designation: editForm.speaker.designation,
+                            companyName: editForm.speaker.companyName,
+                            department: editForm.speaker.department,
+                            batch: editForm.speaker.batch,
+                          }
+                        };
+
+                        console.log('PUT /api/webinars/:id/main payload:', payload);
+
+                        const res = await fetch(`${API_BASE_URL}/api/webinars/${webinar._id}/main`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload)
+                        });
+
+                        const data = await res.json().catch(() => ({}));
+
+                        if (!res.ok) {
+                          setPopup({ message: data?.error || 'Failed to save changes', type: 'error' });
+                          return;
+                        }
+
+                        setPopup({ message: 'Webinar updated successfully!', type: 'success' });
+                        // Update local webinar state so UI reflects changes
+                        setWebinar(data?.data || webinar);
+                        setShowEditDialog(false);
+                      } catch (e) {
+                        console.error('Save webinar error:', e);
+                        setPopup({ message: 'Failed to save changes', type: 'error' });
+                      } finally {
+                        setSavingEdit(false);
+                      }
+                    }}
+                    disabled={savingEdit}
+                  >
+                    {savingEdit ? 'Saving...' : 'Save Changes'}
+                  </button>
+
+
+                <button
+                  className="submit1-btn"
+                  style={{ backgroundColor: '#9ca3af', color: 'white' }}
+                  onClick={() => setShowEditDialog(false)}
+                  disabled={savingEdit}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -214,7 +214,7 @@ const WebinarAlumniFeedbackForm = () => {
             <div className="icon-wrapper">
               <GraduationCap className="header-icon" />
             </div>
-            <h1 className="form-title">Webinar Alumni Feedback Form</h1>
+            <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">Webinar Alumni Feedback Form</h1>
             <div className="webinar-subtitle">Provide your feedback for the attended webinar</div>
           </div>
 
