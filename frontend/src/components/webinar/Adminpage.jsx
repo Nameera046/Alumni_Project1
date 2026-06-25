@@ -894,6 +894,62 @@ const Adminpage = ({ userEmail }) => {
     XLSX.writeFile(workbook, fileName);
   };
 
+  // -------------------------
+  // Prize Winners helpers
+  // -------------------------
+  const getPrizeWinnerMonthKey = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const prizeWinnerDomainOptions = Array.from(
+    new Set((prizeWinners || []).map((w) => w.domain).filter(Boolean))
+  ).sort();
+
+  const prizeWinnerMonthOptions = Array.from(
+    new Set((prizeWinners || []).map((w) => getPrizeWinnerMonthKey(w.webinarDate)).filter(Boolean))
+  )
+    .sort()
+    .map((value) => ({ value, label: getMonthLabel(value) }));
+
+  const filteredPrizeWinners = (prizeWinners || []).filter((w) => {
+    const phaseId = String(w.phaseId ?? '');
+    const domain = w.domain ?? '';
+    const month = getPrizeWinnerMonthKey(w.webinarDate);
+
+    return (
+      (!selectedFilters.phaseId || phaseId === String(selectedFilters.phaseId)) &&
+      (!selectedFilters.domain || domain === selectedFilters.domain) &&
+      (!selectedFilters.month || month === selectedFilters.month)
+    );
+  });
+
+  const exportFilteredPrizeWinners = () => {
+    if (!filteredPrizeWinners.length) {
+      alert('No prize winners available to export for the selected filters.');
+      return;
+    }
+
+    const exportData = filteredPrizeWinners.map((w, idx) => ({
+      'Serial Number': idx + 1,
+      'Phase': w.phaseId ?? 'N/A',
+      'Webinar Domain': w.domain ?? 'N/A',
+      'Webinar Topic': w.topic ?? 'N/A',
+      'Webinar Date': w.webinarDate ? new Date(w.webinarDate).toLocaleDateString() : 'N/A',
+      'Prize Winner Name': w.prizeWinnerName ?? 'N/A',
+      'Prize Winner Email': w.prizeWinnerEmail ?? 'N/A',
+      'Prize Winner Mobile': w.prizeWinnerMobile ?? 'N/A',
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Prize Winners');
+
+    const fileName = `prize_winners_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
 
   useEffect(() => {
     if (activeView !== 'webinarDocs') return;
