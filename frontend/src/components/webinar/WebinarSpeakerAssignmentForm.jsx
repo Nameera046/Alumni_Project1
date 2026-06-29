@@ -21,7 +21,7 @@ export default function WebinarSpeakerAssignmentForm() {
   const [formData, setFormData] = useState({
     email: '', name: '', department: '', batch: '', designation: '', companyName: '', speakerPhoto: null, domain: '', topic: '', webinarVenue: '', alumniCity: '', webinarType: 'In Person', meetingLink: ''
   });
-  const [slots, setSlots] = useState([{ deadline: '2024-12-15', webinarDate: '', time: '9:30-10:30' }]);
+  const [slots, setSlots] = useState([{ deadline: '', webinarDate: '', time: '9:30-10:30' }]);
   const [showPoster, setShowPoster] = useState(false);
   const [photoURL, setPhotoURL] = useState(null);
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
@@ -67,37 +67,76 @@ export default function WebinarSpeakerAssignmentForm() {
     };
   }, []);
 
-  useEffect(() => {
-    const fetchTopics = async () => {
-      if (!formData.domain) {
-        setTopics([]);
-        return;
-      }
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/topic-approvals`);
-        const data = await response.json();
-        console.log('Fetched topic approvals:', data);
-        console.log('formData.domain:', formData.domain);
-        // Only show topics that are approved (not On Hold)
-        const filteredTopics = data.filter(topic => {
-          const topicDomainNormalized = topic.domain.toLowerCase().replace(/\s*\([^)]*\)\s*$/, '');
-          const formDomainNormalized = formData.domain.toLowerCase().replace(/\s*\([^)]*\)\s*$/, '');
-          const domainMatch = topicDomainNormalized === formDomainNormalized;
-          const approvalMatch = topic.approval === 'Approved';
-          console.log(
-            `Topic: ${topic.topic}, domain: ${topic.domain}, approval: ${topic.approval}, domainMatch: ${domainMatch}, approvalMatch: ${approvalMatch}`
-          );
-          return domainMatch && approvalMatch;
-        });
-        console.log('Filtered topics:', filteredTopics);
-        setTopics(filteredTopics);
+useEffect(() => {
+  const normalizeDomain = (val) => {
+    if (val === null || val === undefined) return "";
 
-      } catch (error) {
-        console.error('Error fetching topics:', error);
-      }
-    };
-    fetchTopics();
-  }, [formData.domain]);
+    return String(val)
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/(\s*\([^)]*\)\s*)+$/g, "")
+      .trim();
+  };
+
+  const fetchTopics = async () => {
+    if (!formData.domain) {
+      setTopics([]);
+      setFormData(prev => ({ ...prev, topic: "" }));
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/topic-approvals`);
+      const data = await response.json();
+
+      const formDomainNormalized = normalizeDomain(formData.domain);
+
+      const filteredTopics = (Array.isArray(data) ? data : []).filter(topic => {
+        if (topic?.approval !== "Approved") return false;
+
+        return (
+          normalizeDomain(topic?.domain) === formDomainNormalized
+        );
+      });
+
+      // console.log("Filtered Topics:", filteredTopics);
+
+      setTopics(filteredTopics);
+
+      setFormData(prev => {
+        // console.log("Selected Topic:", prev.topic);
+
+        if (!prev.topic) return prev;
+
+        const exists = filteredTopics.some(
+          t =>
+            t.topic?.trim().toLowerCase() ===
+            prev.topic?.trim().toLowerCase()
+        );
+
+        // console.log("Exists:", exists);
+
+        if (exists) {
+          return prev;
+        }
+
+        // console.log("Topic cleared");
+
+        return {
+          ...prev,
+          topic: "",
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching topics:", error);
+    }
+  };
+
+  fetchTopics();
+}, [formData.domain]);
+
+
 
   useEffect(() => {
     const fetchCurrentPhase = async () => {
@@ -208,7 +247,7 @@ export default function WebinarSpeakerAssignmentForm() {
         newValue = value.replace(/\s+/g, " ");
       }
     }
-
+    // console.log("Changed:", name, newValue); 
     setFormData(prev => ({ ...prev, [name]: newValue }));
 
     if (errors[name]) validateField(name, newValue);
@@ -527,7 +566,12 @@ export default function WebinarSpeakerAssignmentForm() {
                 >
                   <option value="">Select Webinar Topic</option>
                   {topics.map(topic => (
-                    <option key={topic._id} value={topic.topic}>{topic.topic}</option>
+                    <option
+                        key={topic._id}
+                        value={topic.topic.trim().replace(/\s+/g, " ")}
+                      >
+                        {topic.topic.trim().replace(/\s+/g, " ")}
+                      </option>
                   ))}
                 </select>
               </div>
